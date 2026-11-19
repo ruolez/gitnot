@@ -15,7 +15,7 @@ class TestUsernameError(unittest.TestCase):
                 self.assertIsNotNone(username_error(name))
 
     def test_rejects_reserved_any_case(self):
-        for name in ("admin", "API", "Login", "raw", "static"):
+        for name in ("settings", "API", "Login", "raw", "static"):
             with self.subTest(name=name):
                 self.assertIn("reserved", username_error(name))
 

@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+"""Tells the backend what changed (push history, default branch, size)."""
+
+import sys
+
+sys.path.insert(0, "/opt/mygit/hooks")
+from mygit_hook import call, context, read_updates, say  # noqa: E402
+
+
+def main():
+    updates = read_updates()
+    try:
+        reply = call("/internal/hooks/post-receive", {**context(), "refs": updates})
+    except Exception:  # noqa: BLE001 - the push already happened; never fail it here
+        return 0
+    messages = reply.get("messages") or []
+    if messages:
+        say(["", *messages, ""])
+    return 0
+
+
+sys.exit(main())

@@ -15,12 +15,14 @@ services:
       - "${APP_BIND:-0.0.0.0}:${APP_PORT:-5564}:80"
     environment:
       - MAX_UPLOAD=${MAX_UPLOAD:-2g}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN}
     volumes:
       - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - ./nginx/mygit:/etc/nginx/mygit:ro
       - ./frontend:/usr/share/nginx/html:ro
     depends_on:
       - backend
+      - git
     restart: unless-stopped
     logging: *default-logging
 
@@ -38,6 +40,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+
+  git:
+    build: ./git
+    container_name: mygit-git
+    environment:
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN}
+      - GIT_WORKERS=${GIT_WORKERS:-16}
+    volumes:
+      - repos:/data/repos
+    depends_on:
+      - backend
     restart: unless-stopped
     logging: *default-logging
 

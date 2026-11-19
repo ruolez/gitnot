@@ -1,0 +1,25 @@
+# System config for every repository served by mygit.
+[safe]
+	directory = *
+[core]
+	hooksPath = /opt/mygit/hooks
+[receive]
+	fsckObjects = true
+	advertisePushOptions = true
+	denyNonFastForwards = false
+# Old repositories often carry these harmless quirks; GitHub accepts them too.
+[receive "fsck"]
+	zeroPaddedFilemode = ignore
+	badTimezone = ignore
+	missingSpaceBeforeDate = ignore
+	badDate = ignore
+	missingEmail = ignore
+	badEmail = ignore
+	missingNameBeforeEmail = ignore
+[uploadpack]
+	allowFilter = true
+	allowAnySHA1InWant = false
+[transfer]
+	advertiseSID = false
+[pack]
+	threads = 2

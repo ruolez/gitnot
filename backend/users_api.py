@@ -99,6 +99,10 @@ def delete_user(user_id):
     row = db.query("SELECT * FROM users WHERE id = %s", (user_id,), one=True)
     if not row:
         return api_error("No such user", 404)
+    owned = db.query("SELECT COUNT(*) AS n FROM repos WHERE owner_id = %s", (user_id,), one=True)["n"]
+    if owned:
+        return api_error(f"{row['username']} still owns {owned} repositor{'y' if owned == 1 else 'ies'}; "
+                         "transfer or delete them first", 409)
     db.execute("DELETE FROM users WHERE id = %s", (user_id,))
     audit("user.deleted", {"user": row["username"]})
     return jsonify({"ok": True})

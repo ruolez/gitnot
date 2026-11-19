@@ -1,4 +1,4 @@
-# ${MAX_UPLOAD} is filled in by the nginx image's envsubst at start.
+# ${MAX_UPLOAD} and ${INTERNAL_TOKEN} are filled in by the nginx image's envsubst at start.
 upstream backend { server backend:5000; keepalive 16; }
 
 server {
@@ -12,7 +12,7 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy same-origin always;
 
-    location /static/ {
+    location ^~ /static/ {
         add_header Cache-Control "no-cache" always;
         add_header X-Content-Type-Options nosniff always;
         try_files $uri =404;
@@ -20,17 +20,88 @@ server {
     location = /favicon.ico { try_files /static/favicon.svg =404; default_type image/svg+xml; }
     location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; default_type text/plain; }
 
-    location /api/ {
+    location ^~ /api/ {
         proxy_pass http://backend;
         include /etc/nginx/mygit/proxy.conf;
+    }
+
+    # ---- git over HTTPS: git-http-backend behind our authorization ----
+    location ~ ^/[^/]+/[^/]+/(info/refs|git-upload-pack|git-receive-pack)$ {
+        auth_request /_auth/git;
+        auth_request_set $mg_path $upstream_http_x_mygit_path;
+        auth_request_set $mg_user $upstream_http_x_mygit_user;
+        auth_request_set $mg_user_id $upstream_http_x_mygit_user_id;
+        auth_request_set $mg_repo_id $upstream_http_x_mygit_repo_id;
+        error_page 403 = @git_denied;
+
+        client_max_body_size ${MAX_UPLOAD};
+        # git streams big pushes chunked; FastCGI needs a length, so nginx
+        # spools the body first. Responses (clones) stream straight through.
+        fastcgi_request_buffering on;
+        fastcgi_buffering off;
+        fastcgi_read_timeout 3600s;
+        fastcgi_send_timeout 3600s;
+        client_body_timeout 3600s;
+        send_timeout 3600s;
+
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /usr/lib/git-core/git-http-backend;
+        fastcgi_param GIT_PROJECT_ROOT /data/repos;
+        fastcgi_param PATH_INFO $mg_path;
+        fastcgi_param REMOTE_USER $mg_user;
+        fastcgi_param GIT_HTTP_EXPORT_ALL 1;
+        fastcgi_param GIT_PROTOCOL $http_git_protocol;
+        fastcgi_param GIT_HTTP_MAX_REQUEST_BUFFER 100M;
+        fastcgi_param MYGIT_USER $mg_user;
+        fastcgi_param MYGIT_USER_ID $mg_user_id;
+        fastcgi_param MYGIT_REPO_ID $mg_repo_id;
+        fastcgi_param MYGIT_VIA http;
+        fastcgi_param PATH /usr/local/bin:/usr/bin:/bin;
+        fastcgi_param HOME /home/git;
+        fastcgi_pass git:9000;
     }
 
     # Web pages. Every page is one static HTML file whose script reads the path.
     location = / { add_header Cache-Control "no-cache" always; try_files /index.html =404; }
     location ~ ^/(login|explore|new)/?$ { add_header Cache-Control "no-cache" always; try_files /$1.html =404; }
-    location ~ ^/(settings|admin)(/.*)?$ { add_header Cache-Control "no-cache" always; try_files /$1.html =404; }
+    location ~ ^/settings(/.*)?$ { add_header Cache-Control "no-cache" always; try_files /settings.html =404; }
+    location ~ ^/-/admin(/.*)?$ { add_header Cache-Control "no-cache" always; try_files /admin.html =404; }
+
+    location = /_auth/git {
+        internal;
+        proxy_pass http://backend/internal/git-auth;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_set_header X-Original-Method $request_method;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Internal-Token "${INTERNAL_TOKEN}";
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+
+    location @git_denied {
+        rewrite ^ /internal/git-denied break;
+        proxy_pass http://backend;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Internal-Token "${INTERNAL_TOKEN}";
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+
+    location ^~ /internal/ { return 404; }
 
     include /etc/nginx/mygit/routes.d/*.conf;
+
+    # A browser opening a clone URL lands on the repository page.
+    location ~ ^/([^/]+)/([^/]+)\.git/?$ { return 301 /$1/$2; }
+    location ~ ^/[^/]+/?$ { add_header Cache-Control "no-cache" always; try_files /owner.html =404; }
+    location ~ ^/[^/]+/[^/]+(/.*)?$ { add_header Cache-Control "no-cache" always; try_files /repo.html =404; }
 
     location / { return 404; }
 }

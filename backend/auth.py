@@ -35,17 +35,33 @@ def _session_user():
 
 def load_user():
     """before_request: who is calling. Cookies for the web UI; an access token
-    in Authorization for scripts (see credentials.py). A request that sends a
-    token is judged by the token alone, never by a cookie that rides along."""
+    in Authorization for scripts and git. A request that sends a token is
+    judged by the token alone, never by a cookie that rides along."""
+    import credentials
+
     g.user = None
-    g.auth_via = None
-    g.token = None
+    g.principal = credentials.ANONYMOUS
     if request.path.startswith("/internal/"):
+        return None
+    header = request.headers.get("Authorization", "")
+    if header:
+        ip = client_ip()
+        token = credentials.parse_authorization(header)
+        principal = credentials.lookup(token) if token else None
+        if principal is None:
+            if too_many_failures(ip, "token"):
+                return api_error("Too many failed attempts. Try again in a few minutes.", 429)
+            record_failure(ip, "token")
+            return api_error("Bad credentials", 401)
+        g.principal = principal
+        g.user = principal.user
+        if request.method in UNSAFE_METHODS and principal.access == "read":
+            return api_error("This token is read-only", 403)
         return None
     row = _session_user()
     if row:
         g.user = row
-        g.auth_via = "session"
+        g.principal = credentials.session_principal(row)
         # A page on another site can post a form with our cookie, but it can't
         # add a custom header without a CORS preflight we never answer.
         if request.method in UNSAFE_METHODS and request.headers.get("X-Requested-With") != "mygit":
@@ -64,11 +80,12 @@ def login_required(f):
 
 
 def admin_required(f):
+    """Site administration happens in the browser; tokens can't reach it."""
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not g.user:
             return api_error("Not authenticated", 401)
-        if not g.user["is_admin"]:
+        if not g.user["is_admin"] or g.principal.kind != "session":
             return api_error("Admin access required", 403)
         return f(*args, **kwargs)
 
@@ -82,25 +99,29 @@ def session_required(f):
     def wrapper(*args, **kwargs):
         if not g.user:
             return api_error("Not authenticated", 401)
-        if g.auth_via != "session":
+        if g.principal.kind != "session":
             return api_error("Sign in on the website to do this", 403)
         return f(*args, **kwargs)
 
     return wrapper
 
 
-def too_many_failures(ip):
+def too_many_failures(ip, kind="login"):
+    """kind 'login' (passwords) or 'token'. Tokens are 214-bit random strings,
+    so their limit only slows scanners down; it is applied to unknown tokens,
+    never to a valid one."""
+    limit = config.AUTH_FAILURE_LIMIT if kind == "login" else config.AUTH_FAILURE_LIMIT * 10
     row = db.query(
         """SELECT COUNT(*) AS n FROM auth_failures
-           WHERE ip = %s AND at > now() - make_interval(mins => %s)""",
-        (ip, config.AUTH_FAILURE_WINDOW_MIN),
+           WHERE kind = %s AND ip = %s AND at > now() - make_interval(mins => %s)""",
+        (kind, ip, config.AUTH_FAILURE_WINDOW_MIN),
         one=True,
     )
-    return row["n"] >= config.AUTH_FAILURE_LIMIT
+    return row["n"] >= limit
 
 
-def record_failure(ip):
-    db.execute("INSERT INTO auth_failures (ip) VALUES (%s)", (ip,))
+def record_failure(ip, kind="login"):
+    db.execute("INSERT INTO auth_failures (ip, kind) VALUES (%s, %s)", (ip, kind))
     db.execute("DELETE FROM auth_failures WHERE at < now() - interval '1 day'")
 
 

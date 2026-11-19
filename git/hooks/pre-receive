@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Refuses pushes the server's rules don't allow: protected refs (asked of
+the backend) and files above the size limit (checked here, because the new
+objects are still in git's quarantine directory only this process sees)."""
+
+import sys
+
+sys.path.insert(0, "/opt/mygit/hooks")
+from mygit_hook import ZERO, call, context, git, read_updates, say  # noqa: E402
+
+
+def forced(update):
+    if update["old"] == ZERO or update["new"] == ZERO or not update["ref"].startswith("refs/heads/"):
+        return False
+    return git("merge-base", "--is-ancestor", update["old"], update["new"]).returncode == 1
+
+
+def oversized(updates, limit_bytes):
+    """Paths of new blobs larger than the limit, across all pushed refs."""
+    tips = [u["new"] for u in updates if u["new"] != ZERO]
+    if not tips:
+        return []
+    listing = git("rev-list", "--objects", *tips, "--not", "--all")
+    if listing.returncode != 0:
+        return []
+    checked = git("cat-file", "--batch-check=%(objecttype) %(objectsize) %(rest)", input=listing.stdout)
+    found = []
+    for line in checked.stdout.decode("utf-8", "replace").splitlines():
+        kind, _, rest = line.partition(" ")
+        size, _, path = rest.partition(" ")
+        if kind == "blob" and size.isdigit() and int(size) > limit_bytes:
+            found.append((path or "?", int(size)))
+    return found
+
+
+def main():
+    updates = read_updates()
+    ctx = context()
+    force = {u["ref"]: True for u in updates if forced(u)}
+    try:
+        verdict = call("/internal/hooks/pre-receive", {**ctx, "refs": updates, "force": force})
+    except Exception as e:  # noqa: BLE001 - any failure must refuse the push
+        say([f"mygit: could not check this push ({e.__class__.__name__}); try again in a moment"])
+        return 1
+    if not verdict.get("ok"):
+        say(["", *[f"error: {m}" for m in verdict.get("messages") or ["push refused"]], ""])
+        return 1
+    limit_mb = int(verdict.get("max_file_mb") or 0)
+    if limit_mb > 0:
+        big = oversized(updates, limit_mb * 1024 * 1024)
+        if big:
+            say(["", f"error: files larger than {limit_mb} MB can't be pushed:"]
+                + [f"error:   {path} ({size / 1048576:.1f} MB)" for path, size in big[:20]]
+                + ["error: Put large binaries in a release instead.", ""])
+            return 1
+    return 0
+
+
+sys.exit(main())

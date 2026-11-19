@@ -22,11 +22,15 @@ def create_app():
     db.run_migrations()
 
     import auth
+    import internal_api
+    import repos_api
+    import site_settings_api
+    import tokens_api
     import users_api
 
     app.before_request(auth.load_user)
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(users_api.bp)
+    for module in (auth, users_api, tokens_api, repos_api, internal_api, site_settings_api):
+        app.register_blueprint(module.bp)
     app.teardown_appcontext(db.close_db)
 
     @app.after_request

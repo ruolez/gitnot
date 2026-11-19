@@ -275,7 +275,7 @@ async function renderShell(active = '') {
             <div class="menu-head">Signed in as <strong>${esc(me.username)}</strong></div>
             <a href="/${encodeURIComponent(me.username)}">${icon('repo')}Your repositories</a>
             <a href="/settings">${icon('gear')}Settings</a>
-            ${me.is_admin ? `<a href="/admin">${icon('shield')}Site admin</a>` : ''}
+            ${me.is_admin ? `<a href="/-/admin">${icon('shield')}Site admin</a>` : ''}
             <button type="button" id="theme-btn">${icon('moon')}Toggle theme</button>
             <hr>
             <button type="button" id="logout-btn">${icon('logout')}Sign out</button>

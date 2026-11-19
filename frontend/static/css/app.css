@@ -304,3 +304,46 @@ table.table { width: 100%; border-collapse: collapse; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading { padding: 40px; text-align: center; color: var(--text-2); }
+
+/* ---------- repository lists ---------- */
+.repo-item { display: flex; gap: 12px; align-items: flex-start; }
+.repo-item > .ico { margin-top: 3px; color: var(--text-3); }
+.repo-item h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; word-break: break-word; }
+.repo-item p { margin: 4px 0 0; color: var(--text-2); }
+.repo-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--text-3); font-size: 12px; margin-top: 6px; }
+.compact-list > li { padding: 8px 12px; display: flex; gap: 8px; align-items: center; min-width: 0; }
+.compact-list a { font-weight: 500; }
+.dash { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .dash { grid-template-columns: 1fr; } }
+.filter { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.event { display: flex; gap: 10px; align-items: flex-start; }
+.event > .ico { margin-top: 3px; color: var(--text-3); }
+.sha { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); }
+a.sha:hover { text-decoration: none; border-color: var(--accent); }
+
+/* ---------- repository header + tabs ---------- */
+.repo-head { background: var(--surface); border-bottom: 1px solid var(--border); }
+.repo-head-inner { max-width: 1280px; margin: 0 auto; padding: 16px 16px 0; }
+.repo-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 18px; margin-bottom: 12px; }
+.repo-title > .ico { color: var(--text-3); }
+.repo-title strong a { font-weight: 600; }
+.repo-title .sep { color: var(--text-3); }
+.repo-title .badge { font-size: 12px; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a {
+  display: inline-flex; gap: 6px; align-items: center; padding: 8px 12px;
+  color: var(--text-2); border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500;
+}
+.tabs a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--border-strong); }
+.tabs a.active { color: var(--text); border-bottom-color: var(--accent); }
+.tabs .count { font-size: 12px; background: var(--surface-3); border-radius: 999px; padding: 0 7px; }
+
+/* ---------- clone box + quick setup ---------- */
+.clone-box { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.clone-box input { font-family: var(--mono); font-size: 12.5px; flex: 1; min-width: 200px; }
+pre.code {
+  margin: 0; padding: 12px 14px; overflow-x: auto; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); line-height: 1.6;
+}
+.setup h3 { margin-top: 20px; }
