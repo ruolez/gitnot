@@ -22,6 +22,8 @@ def create_app():
     db.run_migrations()
 
     import auth
+    import browse_api
+    import raw_api
     import internal_api
     import keys_api
     import repos_api
@@ -30,13 +32,16 @@ def create_app():
     import users_api
 
     app.before_request(auth.load_user)
-    for module in (auth, users_api, tokens_api, keys_api, repos_api, internal_api, site_settings_api):
+    for module in (auth, users_api, tokens_api, keys_api, repos_api, browse_api, raw_api, internal_api,
+                   site_settings_api):
         app.register_blueprint(module.bp)
     app.teardown_appcontext(db.close_db)
 
     @app.after_request
     def headers(response):
         response.headers.setdefault("Cache-Control", "no-store")
+        if response.mimetype == "application/json":
+            response.headers.setdefault("Content-Security-Policy", "default-src 'none'; sandbox")
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
 

@@ -64,19 +64,6 @@ git push -u origin ${esc(branch)}</pre>
   </div>`;
 }
 
-RepoViews.code = {
-  tab: 'code',
-  async render(el) {
-    if (Repo.info.empty) {
-      el.innerHTML = quickSetup(Repo.info);
-      wireCloneBox(el);
-      return;
-    }
-    el.innerHTML = `<div class="card card-pad">${cloneBox(Repo.info)}</div>`;
-    wireCloneBox(el);
-  },
-};
-
 const REPO_TABS = [
   { key: 'code', label: 'Code', icon: 'code', path: '' },
   { key: 'commits', label: 'Commits', icon: 'history', path: '/commits' },
@@ -111,7 +98,8 @@ function pickView(rest) {
   return key && RepoViews[key] ? RepoViews[key] : null;
 }
 
-(async function () {
+// Views come from later scripts; start once every script has run.
+document.addEventListener('DOMContentLoaded', async () => {
   Repo.me = await renderShell();
   const parts = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
   [Repo.owner, Repo.name] = parts;
@@ -141,4 +129,4 @@ function pickView(rest) {
   try {
     await view.render($('#view'));
   } catch (err) { showError($('#view'), err); }
-})();
+});

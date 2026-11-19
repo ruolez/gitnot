@@ -152,3 +152,31 @@ def activity():
         "repo": f"{r['owner']}/{r['name']}", "ref": r["ref"], "old_sha": r["old_sha"], "new_sha": r["new_sha"],
         "at": r["at"].isoformat(), "actor": r["actor"], "via": r["via"],
     } for r in rows])
+
+
+@bp.delete("/repos/<owner>/<name>/branches/<path:branch>")
+@login_required
+def delete_branch(owner, name, branch):
+    found, err = load_repo(owner, name, "write")
+    if err:
+        return err
+    repo, level = found
+    import protection
+    from permissions import can_push
+
+    if not can_push(repo, level):
+        return api_error("This repository is read-only", 403)
+    ref = f"refs/heads/{branch}"
+    if not gitcmd.ref_exists(repo["id"], ref):
+        return api_error("No such branch", 404)
+    old = gitcmd.text(repo["id"], ["rev-parse", ref]).strip()
+    update = {"old": old, "new": gitcmd.ZERO_SHA, "ref": ref}
+    problems = protection.check(repo, level, [update])
+    if problems:
+        return api_error(problems[0], 403)
+    gitcmd.run(repo["id"], ["update-ref", "-d", ref, old])
+    import internal_api
+
+    internal_api.record_push(repo, g.user, "web", [update])
+    audit("branch.deleted", {"repo": f"{repo['owner']}/{repo['name']}", "branch": branch})
+    return jsonify({"ok": True})

@@ -144,6 +144,16 @@ def post_receive():
     actor = str(data.get("actor") or (user["username"] if user else ""))[:100]
     via = "ssh" if data.get("via") == "ssh" else "http"
     messages = []
+    branches = record_push(repo, user, via, updates, actor)
+    if repo["is_empty"] and branches and urls.base_url():
+        messages.append(f"View it at {urls.base_url()}{urls.repo_path(repo['owner'], repo['name'])}")
+    return jsonify({"messages": messages})
+
+
+def record_push(repo, user, via, updates, actor=None):
+    """Bookkeeping after refs changed (by a push, or by the website):
+    push history, HEAD, size and emptiness. Returns the branch names."""
+    actor = actor if actor is not None else (user["username"] if user else "")
     with db.transaction():
         for u in updates:
             db.execute(
@@ -160,9 +170,7 @@ def post_receive():
                       default_branch = %s WHERE id = %s""",
             (not branches, gitcmd.size_kb(repo["id"]), default_branch, repo["id"]),
         )
-    if repo["is_empty"] and branches and urls.base_url():
-        messages.append(f"View it at {urls.base_url()}{urls.repo_path(repo['owner'], repo['name'])}")
-    return jsonify({"messages": messages})
+    return branches
 
 
 def fix_head(repo, pushed_branches):
