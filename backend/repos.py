@@ -61,8 +61,23 @@ def access_for(repo, principal):
     return repo_access(repo, principal or ANONYMOUS, collaborator_role(repo["id"], principal.user if principal else None))
 
 
+def add_redirect(owner, name, repo_id):
+    """Old address owner/name keeps leading to repo_id."""
+    db.execute(
+        """INSERT INTO repo_redirects (owner, name, repo_id) VALUES (%s, %s, %s)
+           ON CONFLICT ((lower(owner)), (lower(name))) DO UPDATE SET repo_id = EXCLUDED.repo_id""",
+        (owner, name, repo_id),
+    )
+
+
+def clear_redirect(owner, name):
+    db.execute("DELETE FROM repo_redirects WHERE lower(owner) = lower(%s) AND lower(name) = lower(%s)", (owner, name))
+
+
 def create(owner_id, name, description="", is_private=False, default_branch="main"):
+    owner = db.query("SELECT username FROM users WHERE id = %s", (owner_id,), one=True)
     with db.transaction():
+        clear_redirect(owner["username"], name)
         row = db.execute(
             """INSERT INTO repos (owner_id, name, description, is_private, default_branch)
                VALUES (%s, %s, %s, %s, %s) RETURNING id""",

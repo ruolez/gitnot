@@ -13,7 +13,7 @@ function eventItem(e) {
     ? ` <a class="sha" href="${base}/compare/${e.old_sha.slice(0, 12)}...${e.new_sha.slice(0, 12)}">${e.old_sha.slice(0, 7)}…${e.new_sha.slice(0, 7)}</a>` : '';
   return `<li class="event">${icon(isTag ? 'tag' : 'commit')}<div class="grow">
     <div><strong>${esc(e.actor || 'someone')}</strong> ${what} <a href="${base}">${esc(e.repo)}</a>${range}</div>
-    <div class="small faint">${timeTag(e.at)} · via ${e.via === 'ssh' ? 'SSH' : 'HTTPS'}</div></div></li>`;
+    <div class="small faint">${timeTag(e.at)} · ${{ ssh: 'via SSH', web: 'on the website' }[e.via] || 'via HTTPS'}</div></div></li>`;
 }
 
 (async function () {

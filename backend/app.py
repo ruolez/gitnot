@@ -26,13 +26,14 @@ def create_app():
     import raw_api
     import internal_api
     import keys_api
+    import repo_settings_api
     import repos_api
     import site_settings_api
     import tokens_api
     import users_api
 
     app.before_request(auth.load_user)
-    for module in (auth, users_api, tokens_api, keys_api, repos_api, browse_api, raw_api, internal_api,
+    for module in (auth, users_api, tokens_api, keys_api, repos_api, repo_settings_api, browse_api, raw_api, internal_api,
                    site_settings_api):
         app.register_blueprint(module.bp)
     app.teardown_appcontext(db.close_db)

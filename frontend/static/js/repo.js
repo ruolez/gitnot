@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.title = `${Repo.info.full_name} · mygit`;
   const view = pickView(Repo.rest);
   renderRepoHeader(view ? view.tab : '');
-  main.innerHTML = '<div id="view"></div>';
+  main.innerHTML = `${Repo.info.archived ? `<div class="notice warning">${icon('archive')} This repository is archived. It is read-only: pushes are refused.</div>` : ''}<div id="view"></div>`;
   if (!view) { showError($('#view'), { status: 404 }); return; }
   try {
     await view.render($('#view'));

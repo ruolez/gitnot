@@ -84,8 +84,15 @@ def update_user(user_id):
     if not fields:
         return jsonify(_admin_row(row))
     sets = ", ".join(f"{k} = %s" for k in fields)
-    row = db.execute(f"UPDATE users SET {sets} WHERE id = %s RETURNING *",
-                     (*fields.values(), user_id), returning=True)
+    with db.transaction():
+        if "username" in fields and fields["username"] != row["username"]:
+            import repos
+
+            for r in db.query("SELECT id, name FROM repos WHERE owner_id = %s", (user_id,)):
+                repos.add_redirect(row["username"], r["name"], r["id"])
+                repos.clear_redirect(fields["username"], r["name"])
+        row = db.execute(f"UPDATE users SET {sets} WHERE id = %s RETURNING *",
+                         (*fields.values(), user_id), returning=True)
     audit("user.updated", {"user": row["username"], "fields": sorted(k for k in fields if k != "password_hash")
                            + (["password"] if "password_hash" in fields else [])})
     return jsonify(_admin_row(row))
