@@ -46,11 +46,14 @@ services:
   git:
     build: ./git
     container_name: mygit-git
+    ports:
+      - "${SSH_BIND:-0.0.0.0}:${SSH_PORT:-2222}:22"
     environment:
       - INTERNAL_TOKEN=${INTERNAL_TOKEN}
       - GIT_WORKERS=${GIT_WORKERS:-16}
     volumes:
       - repos:/data/repos
+      - sshkeys:/data/ssh
     depends_on:
       - backend
     restart: unless-stopped
@@ -78,3 +81,4 @@ volumes:
   pgdata:
   repos:
   releases:
+  sshkeys:

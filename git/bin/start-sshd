@@ -1,0 +1,12 @@
+#!/bin/bash
+# Host keys live on the sshkeys volume so clients never see them change.
+set -eu
+mkdir -p /data/ssh
+for t in ed25519 ecdsa rsa; do
+    f=/data/ssh/ssh_host_${t}_key
+    if [ ! -f "$f" ]; then
+        if [ "$t" = rsa ]; then ssh-keygen -q -t rsa -b 3072 -N '' -f "$f"; else ssh-keygen -q -t "$t" -N '' -f "$f"; fi
+    fi
+done
+chmod 600 /data/ssh/*_key
+exec /usr/sbin/sshd -D -e -f /etc/mygit/sshd_config

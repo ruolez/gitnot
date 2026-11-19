@@ -1,0 +1,39 @@
+# sshd for git over SSH only. Every key comes from the backend with a forced
+# command (mygit-serve), so no login can get a shell or forward anything.
+Port 22
+HostKey /data/ssh/ssh_host_ed25519_key
+HostKey /data/ssh/ssh_host_ecdsa_key
+HostKey /data/ssh/ssh_host_rsa_key
+PidFile /run/sshd.pid
+
+AllowUsers git
+PermitRootLogin no
+UsePAM no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+AuthorizedKeysFile none
+AuthorizedKeysCommand /usr/local/bin/mygit-keys %u %f
+AuthorizedKeysCommandUser git
+
+PermitTTY no
+X11Forwarding no
+AllowTcpForwarding no
+AllowStreamLocalForwarding no
+AllowAgentForwarding no
+PermitTunnel no
+PermitUserEnvironment no
+PermitUserRC no
+AcceptEnv GIT_PROTOCOL
+PrintMotd no
+PrintLastLog no
+Banner none
+DebianBanner no
+
+LoginGraceTime 30
+MaxAuthTries 6
+MaxStartups 30:50:100
+ClientAliveInterval 60
+ClientAliveCountMax 10
+LogLevel INFO

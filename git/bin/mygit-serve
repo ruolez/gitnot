@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Forced command for every mygit SSH key: asks the backend whether the key
+may run the requested git command, then runs it on the repository."""
+
+import os
+import sys
+
+sys.path.insert(0, "/opt/mygit/hooks")
+from mygit_hook import call  # noqa: E402
+
+SERVICES = {"git-upload-pack": "upload-pack", "git-receive-pack": "receive-pack",
+            "git-upload-archive": "upload-archive"}
+
+
+def main():
+    key_id = sys.argv[1] if len(sys.argv) > 1 else ""
+    command = os.environ.get("SSH_ORIGINAL_COMMAND", "")
+    try:
+        verdict = call("/internal/ssh/authorize", {"key_id": key_id, "command": command}, timeout=20)
+    except Exception as e:  # noqa: BLE001
+        print(f"ERROR: mygit is not reachable right now ({e.__class__.__name__}). Try again in a moment.",
+              file=sys.stderr)
+        return 1
+    if not verdict.get("ok"):
+        prefix = "" if verdict.get("greeting") else "ERROR: "
+        print(prefix + (verdict.get("message") or "Access denied"), file=sys.stderr)
+        return 1
+    service = SERVICES.get(verdict.get("service"))
+    path = verdict.get("path") or ""
+    if service is None or not path.startswith("/data/repos/") or ".." in path:
+        print("ERROR: unexpected reply from mygit", file=sys.stderr)
+        return 1
+    env = {
+        "PATH": "/usr/local/bin:/usr/bin:/bin",
+        "HOME": "/home/git",
+        "LANG": "C.UTF-8",
+        "MYGIT_USER": str(verdict.get("user") or ""),
+        "MYGIT_USER_ID": str(verdict.get("user_id") or ""),
+        "MYGIT_REPO_ID": str(verdict.get("repo_id") or ""),
+        "MYGIT_VIA": "ssh",
+    }
+    if os.environ.get("GIT_PROTOCOL"):
+        env["GIT_PROTOCOL"] = os.environ["GIT_PROTOCOL"]
+    os.execve("/usr/bin/git", ["git", service, path], env)
+    return 1
+
+
+sys.exit(main())

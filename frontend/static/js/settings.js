@@ -104,6 +104,65 @@ SettingsSections.push({
   },
 });
 
+SettingsSections.push({
+  key: 'keys', label: 'SSH keys', icon: 'key',
+  async render(el) {
+    const keys = await api('/api/user/keys');
+    const host = location.hostname;
+    el.innerHTML = `<div class="stack">
+      <div class="card">
+        <div class="card-head"><h2>SSH keys</h2><div class="grow"></div><button class="btn primary sm" id="new-key">${icon('plus')}Add key</button></div>
+        ${keys.length ? `<ul class="list" id="key-list">${keys.map((k) => `<li class="row wrap" data-id="${k.id}">
+          ${icon('key')}<div class="grow"><strong>${esc(k.title)}</strong> <span class="badge">${esc(k.key_type)}</span>
+            <div class="small muted"><code>${esc(k.fingerprint)}</code></div>
+            <div class="small faint">Added ${timeTag(k.created_at)} · ${k.last_used_at ? `last used ${timeTag(k.last_used_at)}` : 'never used'}</div></div>
+          <button class="btn sm danger" data-act="delete">${icon('trash')}Delete</button></li>`).join('')}</ul>`
+          : '<div class="empty">No SSH keys yet. Add one to push and pull over SSH.</div>'}
+      </div>
+      <div class="card card-pad">
+        <h3>Setting up SSH</h3>
+        <p class="muted">Create a key if you don't have one, then add the contents of the <code>.pub</code> file above:</p>
+        <pre class="code">ssh-keygen -t ed25519 -C "you@laptop"
+cat ~/.ssh/id_ed25519.pub</pre>
+        <p class="muted" style="margin-top:12px">mygit listens for SSH on its own port. Add this to <code>~/.ssh/config</code> so short addresses like <code>git@${esc(host)}:owner/repo.git</code> work:</p>
+        <pre class="code" id="ssh-config">Host ${esc(host)}
+  User git
+  Port <span id="ssh-port">2222</span></pre>
+        <p class="muted" style="margin-top:12px">Test it with <code>ssh -T git@${esc(host)}</code>.</p>
+      </div>
+    </div>`;
+    const rerender = () => this.render(el);
+    $('#new-key').addEventListener('click', async () => {
+      const added = await openDialog({
+        title: 'Add an SSH key',
+        body: `<label class="field"><span>Title</span><input type="text" name="title" maxlength="100" placeholder="e.g. MacBook"></label>
+          <label class="field"><span>Public key</span><textarea name="key" class="mono" required placeholder="ssh-ed25519 AAAA… you@laptop"></textarea><small>Starts with ssh-ed25519, ecdsa-sha2-…, ssh-rsa or sk-…</small></label>`,
+        buttons: [{ label: 'Cancel' }, { label: 'Add key', cls: 'primary', submit: true }],
+        onSubmit: (form) => api('/api/user/keys', { method: 'POST', body: formData(form) }),
+      });
+      if (added) { snackbar('Key added'); rerender(); }
+    });
+    const list = $('#key-list');
+    if (list) {
+      list.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-act=delete]');
+        if (!btn) return;
+        const k = keys.find((x) => x.id === Number(btn.closest('li').dataset.id));
+        if (!await confirmDialog(`Delete “${k.title}”?`, 'Computers using this key will no longer be able to push or pull over SSH.', { confirm: 'Delete key', danger: true })) return;
+        try {
+          await api(`/api/user/keys/${k.id}`, { method: 'DELETE' });
+          snackbar('Key deleted');
+          rerender();
+        } catch (err) { snackbar(err.message, 'error'); }
+      });
+    }
+    try {
+      const info = await api('/api/site');
+      $('#ssh-port').textContent = info.ssh_port;
+    } catch { /* keep the default */ }
+  },
+});
+
 (async function () {
   await renderShell('settings');
   const me = await requireLogin();

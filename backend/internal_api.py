@@ -178,3 +178,70 @@ def fix_head(repo, pushed_branches):
     choice = next((b for b in pushed_branches if b in existing), None) or sorted(existing)[0]
     gitcmd.set_head(repo["id"], choice)
     return choice
+
+
+# ---------- SSH (sshd's AuthorizedKeysCommand and the forced command) ----------
+
+@bp.get("/ssh/key")
+@internal_only
+def ssh_key():
+    """authorized_keys line for a fingerprint, as sshd's
+    AuthorizedKeysCommand prints it. Empty when the key is unknown."""
+    fp = request.args.get("fp", "")
+    row = db.query(
+        """SELECT k.id, k.key_type, k.key_blob FROM ssh_keys k JOIN users u ON u.id = k.user_id
+           WHERE k.fingerprint = %s AND u.is_active""",
+        (fp,), one=True,
+    )
+    if not row:
+        return Response("", 200, mimetype="text/plain")
+    line = f'restrict,command="/usr/local/bin/mygit-serve {int(row["id"])}" {row["key_type"]} {row["key_blob"]}\n'
+    return Response(line, 200, mimetype="text/plain")
+
+
+@bp.post("/ssh/authorize")
+@internal_only
+def ssh_authorize():
+    """What the key may run. The command string comes from the client, so
+    only the parsed pieces go back: a fixed service name and a repo path."""
+    from sshkeys import parse_ssh_command
+
+    data = body()
+    key = db.query(
+        """SELECT k.id AS key_id, u.* FROM ssh_keys k JOIN users u ON u.id = k.user_id
+           WHERE k.id = %s AND u.is_active""",
+        (int(data.get("key_id") or 0),), one=True,
+    )
+    if not key:
+        return jsonify({"ok": False, "message": "This key is not registered with mygit"})
+    user = {k: key[k] for k in key if k != "key_id"}
+    command = str(data.get("command") or "")
+    if not command:
+        return jsonify({"ok": False, "greeting": True, "message":
+                        f"Hi {user['username']}! You've authenticated, but mygit does not provide shell access."})
+    cmd = parse_ssh_command(command)
+    if cmd is None:
+        return jsonify({"ok": False, "message": "mygit only runs git commands over SSH"})
+    repo = repos.resolve(cmd.owner, cmd.repo)
+    principal = credentials.Principal(user=user, access="admin", kind="ssh")
+    level = repos.access_for(repo, principal)
+    if repo is None or not at_least(level, "read"):
+        return jsonify({"ok": False, "message": "Repository not found."})
+    if cmd.write:
+        if repo["archived"]:
+            return jsonify({"ok": False, "message": "This repository is archived and read-only."})
+        if not can_push(repo, level):
+            return jsonify({"ok": False, "message": f"Write access to {repo['owner']}/{repo['name']} denied."})
+    db.execute(
+        """UPDATE ssh_keys SET last_used_at = now() WHERE id = %s
+           AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute')""",
+        (key["key_id"],),
+    )
+    return jsonify({
+        "ok": True,
+        "service": cmd.service,
+        "path": gitcmd.repo_path(repo["id"]),
+        "repo_id": repo["id"],
+        "user": user["username"],
+        "user_id": user["id"],
+    })
