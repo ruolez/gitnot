@@ -1,0 +1,36 @@
+# ${MAX_UPLOAD} is filled in by the nginx image's envsubst at start.
+upstream backend { server backend:5000; keepalive 16; }
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    client_max_body_size 1m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy same-origin always;
+
+    location /static/ {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri =404;
+    }
+    location = /favicon.ico { try_files /static/favicon.svg =404; default_type image/svg+xml; }
+    location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; default_type text/plain; }
+
+    location /api/ {
+        proxy_pass http://backend;
+        include /etc/nginx/mygit/proxy.conf;
+    }
+
+    # Web pages. Every page is one static HTML file whose script reads the path.
+    location = / { add_header Cache-Control "no-cache" always; try_files /index.html =404; }
+    location ~ ^/(login|explore|new)/?$ { add_header Cache-Control "no-cache" always; try_files /$1.html =404; }
+    location ~ ^/(settings|admin)(/.*)?$ { add_header Cache-Control "no-cache" always; try_files /$1.html =404; }
+
+    include /etc/nginx/mygit/routes.d/*.conf;
+
+    location / { return 404; }
+}

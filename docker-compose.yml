@@ -1,0 +1,65 @@
+# Production compose. Local development adds the dev overlay:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: mygit-nginx
+    ports:
+      - "${APP_BIND:-0.0.0.0}:${APP_PORT:-5564}:80"
+    environment:
+      - MAX_UPLOAD=${MAX_UPLOAD:-2g}
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/mygit:/etc/nginx/mygit:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging: *default-logging
+
+  backend:
+    build: ./backend
+    container_name: mygit-backend
+    env_file: .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=mygit
+      - POSTGRES_USER=mygit
+    volumes:
+      - repos:/data/repos
+      - releases:/data/releases
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mygit-postgres
+    environment:
+      - POSTGRES_DB=mygit
+      - POSTGRES_USER=mygit
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "max_connections=60", "-c", "shared_buffers=128MB"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mygit -d mygit"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  repos:
+  releases:
