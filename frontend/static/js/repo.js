@@ -98,6 +98,37 @@ function pickView(rest) {
   return key && RepoViews[key] ? RepoViews[key] : null;
 }
 
+/* While an import runs, show its progress instead of the empty-repo page,
+   then reload once it is done. Returns true when an import is under way. */
+async function watchImport(main) {
+  let jobs;
+  try {
+    jobs = await api(`/api/repos/${encodeURIComponent(Repo.info.owner)}/${encodeURIComponent(Repo.info.name)}/jobs`);
+  } catch { return false; }
+  const job = jobs.find((j) => j.kind === 'import');
+  if (!job) return false;
+  if (job.status === 'failed') {
+    main.insertAdjacentHTML('afterbegin', `<div class="notice danger"><strong>The import failed.</strong> ${esc(job.message)}<br><span class="small">Delete this repository in Settings and import again, or push to it yourself.</span></div>`);
+    return false;
+  }
+  if (job.status === 'done') return false;
+  const view = $('#view');
+  const draw = (j) => {
+    view.innerHTML = `<div class="card empty"><span class="spinner"></span><h2 style="margin-top:12px">Importing…</h2>
+      <p class="muted">${esc(j.progress || (j.status === 'queued' ? 'Waiting to start' : 'Working'))}</p>
+      <p class="small faint">You can leave this page; the import keeps going.</p></div>`;
+  };
+  draw(job);
+  const timer = setInterval(async () => {
+    try {
+      const now = (await api(`/api/repos/${encodeURIComponent(Repo.info.owner)}/${encodeURIComponent(Repo.info.name)}/jobs`)).find((j) => j.id === job.id);
+      if (!now || now.status === 'done' || now.status === 'failed') { clearInterval(timer); location.reload(); return; }
+      draw(now);
+    } catch { /* try again next tick */ }
+  }, 1500);
+  return true;
+}
+
 // Views come from later scripts; start once every script has run.
 document.addEventListener('DOMContentLoaded', async () => {
   Repo.me = await renderShell();
@@ -126,6 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderRepoHeader(view ? view.tab : '');
   main.innerHTML = `${Repo.info.archived ? `<div class="notice warning">${icon('archive')} This repository is archived. It is read-only: pushes are refused.</div>` : ''}<div id="view"></div>`;
   if (!view) { showError($('#view'), { status: 404 }); return; }
+  if (Repo.info.empty && Repo.me && await watchImport(main)) return;
   try {
     await view.render($('#view'));
   } catch (err) { showError($('#view'), err); }

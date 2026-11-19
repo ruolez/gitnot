@@ -2,7 +2,8 @@
   const form = $('#login-form');
   const errEl = $('#login-error');
   const next = new URLSearchParams(location.search).get('next');
-  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  // Only paths on this site: not //host, and not /\host (some browsers read it as //host).
+  const safeNext = next && /^\/(?![\/\\])/.test(next) ? next : '/';
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errEl.hidden = true;

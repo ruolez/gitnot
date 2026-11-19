@@ -6,3 +6,8 @@ services:
       - repos:/data/repos
       - releases:/data/releases
     command: ["sh", "-c", "exec gunicorn --bind 0.0.0.0:5000 --worker-class gthread --workers 1 --threads 16 --timeout 3600 --reload 'app:create_app()'"]
+  worker:
+    volumes:
+      - ./backend:/app
+      - repos:/data/repos
+      - releases:/data/releases

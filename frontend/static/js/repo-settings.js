@@ -153,6 +153,51 @@ async function sectionDeployTokens(el) {
   };
 }
 
+async function sectionMirror(el) {
+  const m = await api(repoApi('/mirror'));
+  const status = m && m.last_at
+    ? (m.last_status === 'ok' ? `<span class="badge success">${icon('check')}Synced ${timeTag(m.last_at)}</span>`
+      : `<span class="badge danger">Failed ${timeTag(m.last_at)}</span><div class="small" style="color:var(--danger);margin-top:6px;white-space:pre-wrap">${esc(m.last_error)}</div>`)
+    : (m ? '<span class="badge">Not synced yet</span>' : '');
+  el.innerHTML = `<form class="card" id="mirror-form">
+    <div class="card-head"><h2>Push mirror</h2>${m ? (m.enabled ? '<span class="badge accent">On</span>' : '<span class="badge">Off</span>') : ''}</div>
+    <div class="card-pad">
+      <p class="muted small">After every push, branches and tags are pushed on to another server, for example the GitHub repository this one came from, so it stays an up-to-date backup and old installers that still pull from GitHub keep working.</p>
+      <label class="field"><span>Remote URL</span><input type="text" name="url" value="${esc(m ? m.url : '')}" placeholder="https://github.com/owner/repo.git" autocapitalize="none" spellcheck="false"></label>
+      <div class="row wrap" style="gap:12px;align-items:flex-start">
+        <label class="field" style="min-width:160px"><span>Username</span><input type="text" name="username" value="${esc(m ? m.username : 'x-access-token')}"></label>
+        <label class="field grow"><span>Token</span><input type="password" name="token" autocomplete="off" placeholder="${m && m.has_token ? 'Saved (leave empty to keep)' : 'A token that can push'}">
+          <small>For GitHub: a fine-grained token with Contents: read and write on that repository.</small></label>
+      </div>
+      <label class="check"><input type="checkbox" name="enabled" ${!m || m.enabled ? 'checked' : ''}><span>Push after every change</span></label>
+      ${status ? `<div style="margin:8px 0">${status}</div>` : ''}
+      <div class="form-actions"><button class="btn primary" type="submit">Save</button>
+        ${m ? `<button class="btn" type="button" id="mirror-sync">${icon('mirror')}Sync now</button><div style="flex:1"></div><button class="btn danger" type="button" id="mirror-del">Remove</button>` : ''}</div>
+    </div></form>`;
+  const rerender = () => sectionMirror(el);
+  $('#mirror-form', el).addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api(repoApi('/mirror'), { method: 'PUT', body: formData(e.target) });
+      snackbar('Mirror saved; syncing now');
+      rerender();
+    } catch (err) { snackbar(err.message, 'error'); }
+  });
+  const sync = $('#mirror-sync', el);
+  if (sync) {
+    sync.addEventListener('click', async () => {
+      await api(repoApi('/mirror/sync'), { method: 'POST' });
+      snackbar('Sync queued');
+      setTimeout(rerender, 3000);
+    });
+    $('#mirror-del', el).addEventListener('click', async () => {
+      if (!await confirmDialog('Remove the push mirror?', 'Nothing is deleted on the other server.', { confirm: 'Remove', danger: true })) return;
+      await api(repoApi('/mirror'), { method: 'DELETE' });
+      rerender();
+    });
+  }
+}
+
 function sectionDanger(el, info) {
   el.innerHTML = `<div class="card danger-zone">
     <div class="card-head"><h2>Danger zone</h2></div>
@@ -200,9 +245,10 @@ RepoViews.settings = {
     const refs = Repo.info.empty ? { branches: [] } : await api(repoApi('/refs'));
     el.innerHTML = `<div class="stack" style="max-width:880px">
       <section id="s-general"></section><section id="s-collab"></section><section id="s-protect"></section>
-      <section id="s-deploy"></section><section id="s-danger"></section></div>`;
+      <section id="s-deploy"></section><section id="s-mirror"></section><section id="s-danger"></section></div>`;
     await sectionGeneral($('#s-general', el), Repo.info, refs.branches.map((b) => b.name));
-    await Promise.all([sectionCollaborators($('#s-collab', el)), sectionProtection($('#s-protect', el)), sectionDeployTokens($('#s-deploy', el))]);
+    await Promise.all([sectionCollaborators($('#s-collab', el)), sectionProtection($('#s-protect', el)),
+      sectionDeployTokens($('#s-deploy', el)), sectionMirror($('#s-mirror', el))]);
     sectionDanger($('#s-danger', el), Repo.info);
   },
 };

@@ -61,6 +61,32 @@ AdminSections.push({
   },
 });
 
+AdminSections.push({
+  key: 'settings', label: 'Settings', icon: 'gear',
+  async render(el) {
+    const s = await api('/api/admin/settings');
+    el.innerHTML = `<form class="card card-pad" id="site-settings">
+      <h2>Limits</h2>
+      <label class="field"><span>Largest file in a push (MB)</span><input type="number" name="max_file_mb" min="0" max="10240" value="${s.max_file_mb}" style="max-width:160px">
+        <small>Pushes with a bigger file are refused with its name. 0 = no limit. Big binaries belong in releases.</small></label>
+      <label class="field"><span>Largest release file (MB)</span><input type="number" name="max_asset_mb" min="1" max="102400" value="${s.max_asset_mb}" style="max-width:160px">
+        <small>Also capped by the server's MAX_UPLOAD setting.</small></label>
+      <h2 style="margin-top:20px">Imports and mirrors</h2>
+      <label class="check"><input type="checkbox" name="allow_internal_remotes" ${s.allow_internal_remotes ? 'checked' : ''}><span>Allow servers on the local network (and plain http)
+        <small>Off: imports and push mirrors only reach public https servers, so nobody can point them at this server's own internals. Turn on only to import from a git server on your LAN.</small></span></label>
+      <div class="form-actions"><button class="btn primary" type="submit">Save</button></div>
+    </form>`;
+    $('#site-settings', el).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const d = formData(e.target);
+      try {
+        await api('/api/admin/settings', { method: 'PATCH', body: { max_file_mb: Number(d.max_file_mb), max_asset_mb: Number(d.max_asset_mb), allow_internal_remotes: d.allow_internal_remotes } });
+        snackbar('Settings saved');
+      } catch (err) { snackbar(err.message, 'error'); }
+    });
+  },
+});
+
 (async function () {
   await renderShell('admin');
   const me = await requireLogin();

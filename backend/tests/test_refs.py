@@ -41,7 +41,7 @@ class TestSplitRefPath(unittest.TestCase):
 class TestCleanPath(unittest.TestCase):
     def test_cases(self):
         cases = {"": "", "/": "", "src/": "src", "/src//app.py": "src/app.py", "./a/./b": "a/b",
-                 "../etc": None, "a/../b": None, "a\0b": None}
+                 "../etc": None, "a/../b": None, "a\0b": None, "a\nmain:secret": None, "a\rb": None}
         for raw, want in cases.items():
             with self.subTest(raw=raw):
                 self.assertEqual(clean_path(raw), want)

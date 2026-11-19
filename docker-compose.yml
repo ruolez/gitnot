@@ -1,6 +1,8 @@
 # Production compose. Local development adds the dev overlay:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
+name: mygit
+
 x-logging: &default-logging
   driver: json-file
   options:
@@ -31,6 +33,24 @@ services:
   backend:
     build: ./backend
     container_name: mygit-backend
+    env_file: .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=mygit
+      - POSTGRES_USER=mygit
+    volumes:
+      - repos:/data/repos
+      - releases:/data/releases
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+
+  worker:
+    build: ./backend
+    container_name: mygit-worker
+    command: ["python", "worker.py"]
     env_file: .env
     environment:
       - POSTGRES_HOST=postgres

@@ -39,6 +39,6 @@ def split_ref_path(segments, branches, tags):
 def clean_path(path):
     """A repository-relative path without empty, '.' or '..' pieces, or None."""
     parts = [p for p in (path or "").split("/") if p not in ("", ".")]
-    if any(p == ".." for p in parts) or any("\0" in p for p in parts):
+    if any(p == ".." for p in parts) or any(c in p for p in parts for c in "\0\n\r"):
         return None
     return "/".join(parts)

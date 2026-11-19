@@ -1,0 +1,11 @@
+# Shared-proxy overlay, enabled by install.sh through COMPOSE_FILE in .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml
+# Host nginx (github.com/ruolez/shared-proxy) owns 80/443 and terminates TLS. The web
+# port only listens on loopback (Docker-published ports bypass ufw, so the bind address
+# is the firewall). SSH stays public on SSH_PORT: it is git's other transport.
+services:
+  nginx:
+    ports: !override
+      - "127.0.0.1:${APP_PORT:-5564}:80"
+    volumes:
+      - ./nginx/realip.conf:/etc/nginx/conf.d/00-realip.conf:ro

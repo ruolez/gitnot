@@ -118,6 +118,10 @@ def pre_receive():
         return jsonify({"ok": False, "messages": ["Repository not found"]})
     if repo["archived"]:
         return jsonify({"ok": False, "messages": ["This repository is archived and read-only"]})
+    import import_api
+
+    if import_api.import_running(repo["id"]):
+        return jsonify({"ok": False, "messages": ["This repository is still being imported; push when it is done"]})
     # The push was authorized when it started; deploy tokens have no user and were
     # checked by nginx/sshd. A user deactivated since then is refused here.
     if data.get("user_id") and user is None:
@@ -170,6 +174,10 @@ def record_push(repo, user, via, updates, actor=None):
                       default_branch = %s WHERE id = %s""",
             (not branches, gitcmd.size_kb(repo["id"]), default_branch, repo["id"]),
         )
+    if db.query("SELECT 1 FROM push_mirrors WHERE repo_id = %s AND enabled", (repo["id"],), one=True):
+        import jobs
+
+        jobs.enqueue("mirror", repo["id"], user_id=user["id"] if user else None, dedupe=True)
     return branches
 
 

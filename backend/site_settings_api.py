@@ -18,14 +18,25 @@ def _int_range(lo, hi):
     return parse
 
 
+def _flag(v):
+    if not isinstance(v, bool):
+        raise ValueError("must be true or false")
+    return "1" if v else "0"
+
+
 SETTINGS = {
     "max_file_mb": ("100", _int_range(0, 10240)),
     "max_asset_mb": ("2048", _int_range(1, 102400)),
+    "allow_internal_remotes": ("0", _flag),
 }
 
 
 def current():
-    return {key: int(db.get_setting(key, default)) for key, (default, _parse) in SETTINGS.items()}
+    out = {}
+    for key, (default, parse) in SETTINGS.items():
+        raw = db.get_setting(key, default)
+        out[key] = raw == "1" if parse is _flag else int(raw)
+    return out
 
 
 @bp.get("")
