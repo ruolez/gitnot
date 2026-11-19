@@ -33,6 +33,8 @@ def load_repo(owner, name, wanted="read"):
     if repo is None or not at_least(level, "read"):
         return None, api_error("Repository not found", 404)
     if not at_least(level, wanted):
+        if g.principal.kind == "anonymous":
+            return None, api_error("Requires authentication", 401)
         return None, api_error(f"You need {wanted} access to do this", 403)
     return (repo, level), None
 

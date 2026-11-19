@@ -13,6 +13,12 @@ import requests
 BASE = os.environ.get("MYGIT_BASE", "http://localhost:5564").rstrip("/")
 HOST = BASE.split("://", 1)[1]
 ADMIN = (os.environ.get("ADMIN_USERNAME", "admin"), os.environ["ADMIN_INITIAL_PASSWORD"])
+# Links in API replies use the site's public address; tests reach it as BASE.
+PUBLIC = requests.get(f"{BASE}/api/site", timeout=30).json()["base_url"].rstrip("/")
+
+
+def local(url):
+    return BASE + url[len(PUBLIC):] if PUBLIC and url.startswith(PUBLIC) else url
 
 
 class Api(requests.Session):

@@ -3,7 +3,7 @@ import re
 # Top-level paths the site owns; an account with one of these names would
 # shadow a page (mygit.example/login) or a route nginx sends elsewhere.
 RESERVED = frozenset({
-    "about", "api", "assets", "explore", "favicon.ico", "health", "healthz",
+    "about", "api", "cli", "assets", "explore", "favicon.ico", "health", "healthz",
     "help", "install", "internal", "login", "logout", "new", "raw", "robots.txt",
     "settings", "signup", "static", "users", "git", "mygit", "repos", "org", "orgs",
     "_auth", "well-known", ".well-known",

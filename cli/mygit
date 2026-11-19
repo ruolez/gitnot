@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""mygit command line: releases and repositories from the terminal or a
+release script (replaces `gh release`). Python 3 standard library only.
+
+  mygit login https://git.example.com          save the server and a token
+  mygit repo create <name> [--private] [--description TEXT] [--owner USER]
+  mygit release list   <owner/repo>
+  mygit release create <owner/repo> <tag> [files...] [--title T] [--notes T | --notes-file F]
+                       [--target BRANCH] [--draft] [--prerelease] [--latest=false]
+  mygit release upload <owner/repo> <tag> files... [--clobber]
+  mygit release delete <owner/repo> <tag>
+  mygit release download <owner/repo> <tag> [--dir DIR]
+
+Server and token come from $MYGIT_URL / $MYGIT_TOKEN, else from
+~/.config/mygit/config (written by `mygit login`)."""
+
+import argparse
+import getpass
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+CONFIG = os.path.join(os.path.expanduser("~"), ".config", "mygit", "config")
+CHUNK = 1024 * 1024
+
+
+class Fail(Exception):
+    pass
+
+
+def load_config():
+    cfg = {}
+    try:
+        with open(CONFIG) as f:
+            cfg = json.load(f)
+    except (OSError, ValueError):
+        pass
+    url = os.environ.get("MYGIT_URL") or cfg.get("url")
+    token = os.environ.get("MYGIT_TOKEN") or cfg.get("token")
+    if not url:
+        raise Fail("No server configured: run `mygit login https://your-server` or set MYGIT_URL")
+    return url.rstrip("/"), token
+
+
+def request(method, path, data=None, body=None, headers=None, stream_to=None, auth=True):
+    base, token = load_config()
+    url = path if path.startswith("http") else base + path
+    hdrs = {"Accept": "application/json", "User-Agent": "mygit-cli", **(headers or {})}
+    if auth and token:
+        hdrs["Authorization"] = f"token {token}"
+    payload = None
+    if data is not None:
+        payload = json.dumps(data).encode()
+        hdrs["Content-Type"] = "application/json"
+    elif body is not None:
+        payload = body
+    req = urllib.request.Request(url, data=payload, headers=hdrs, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=3600) as resp:
+            if stream_to:
+                while True:
+                    chunk = resp.read(CHUNK)
+                    if not chunk:
+                        break
+                    stream_to.write(chunk)
+                return None
+            raw = resp.read()
+            return json.loads(raw) if raw else None
+    except urllib.error.HTTPError as e:
+        try:
+            message = json.loads(e.read()).get("error")
+        except (ValueError, AttributeError):
+            message = None
+        if e.code == 401:
+            message = message or "Not signed in"
+            message += " (check your token: mygit login)"
+        raise Fail(f"{method} {path}: {message or e.reason} ({e.code})") from None
+    except urllib.error.URLError as e:
+        raise Fail(f"Can't reach {base}: {e.reason}") from None
+
+
+def q(s):
+    return urllib.parse.quote(s, safe="")
+
+
+def repo_path(full):
+    if full.count("/") != 1:
+        raise Fail(f"Repository must look like owner/name, not {full!r}")
+    owner, name = full.split("/")
+    return f"/api/v1/repos/{q(owner)}/{q(name)}"
+
+
+def find_release(full, tag):
+    return request("GET", f"{repo_path(full)}/releases/tags/{urllib.parse.quote(tag, safe='/')}")
+
+
+class FileBody:
+    """A file object urllib can send with a Content-Length, printing progress."""
+
+    def __init__(self, path):
+        self.f = open(path, "rb")
+        self.size = os.path.getsize(path)
+        self.sent = 0
+        self.name = os.path.basename(path)
+        self.tty = sys.stderr.isatty()
+
+    def read(self, n=-1):
+        chunk = self.f.read(CHUNK if n is None or n < 0 else n)
+        self.sent += len(chunk)
+        if self.tty and self.size:
+            sys.stderr.write(f"\r  {self.name}: {self.sent * 100 // self.size}%")
+            if self.sent >= self.size:
+                sys.stderr.write("\n")
+        return chunk
+
+    def __len__(self):
+        return self.size
+
+
+def upload(full, release, path, clobber=False):
+    name = os.path.basename(path)
+    if not os.path.isfile(path):
+        raise Fail(f"No such file: {path}")
+    existing = [a for a in release.get("assets", []) if a["name"] == name]
+    if existing:
+        if not clobber:
+            raise Fail(f"{name} is already attached to {release['tag_name']} (use --clobber to replace it)")
+        request("DELETE", f"{repo_path(full)}/releases/assets/{existing[0]['id']}")
+    body = FileBody(path)
+    asset = request("POST", f"{repo_path(full)}/releases/{release['id']}/assets?name={q(name)}", body=body,
+                    headers={"Content-Type": "application/octet-stream", "Content-Length": str(body.size)})
+    print(f"uploaded {name} ({asset['size']} bytes, {asset['digest']})")
+    return asset
+
+
+def cmd_login(args):
+    url = args.url.rstrip("/")
+    token = os.environ.get("MYGIT_TOKEN") or getpass.getpass(f"Access token for {url} (Settings > Access tokens): ")
+    os.environ["MYGIT_URL"], os.environ["MYGIT_TOKEN"] = url, token.strip()
+    me = request("GET", "/api/auth/me")
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    fd = os.open(CONFIG, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump({"url": url, "token": token.strip()}, f)
+    print(f"Signed in to {url} as {me['username']}")
+
+
+def cmd_repo_create(args):
+    repo = request("POST", "/api/repos", data={"name": args.name, "private": args.private,
+                                              "description": args.description or "", "owner": args.owner})
+    print(repo["html_url"])
+    print(f"  git remote add origin {repo['clone_urls']['https']}")
+
+
+def cmd_release_list(args):
+    for r in request("GET", f"{repo_path(args.repo)}/releases?per_page=100"):
+        flags = [f for f, on in (("draft", r["draft"]), ("prerelease", r["prerelease"])) if on]
+        print(f"{r['tag_name']}\t{r['name']}\t{r['published_at'] or '-'}\t{len(r['assets'])} assets"
+              + (f"\t{','.join(flags)}" if flags else ""))
+
+
+def cmd_release_create(args):
+    notes = args.notes or ""
+    if args.notes_file:
+        with open(args.notes_file) as f:
+            notes = f.read()
+    data = {"tag_name": args.tag, "name": args.title or args.tag, "body": notes, "draft": True,
+            "prerelease": args.prerelease, "make_latest": args.latest}
+    if args.target:
+        data["target_commitish"] = args.target
+    # Created as a draft, assets attached, then published: nobody sees a half-uploaded release.
+    release = request("POST", f"{repo_path(args.repo)}/releases", data=data)
+    for path in args.files:
+        upload(args.repo, release, path)
+    if not args.draft:
+        release = request("PATCH", f"{repo_path(args.repo)}/releases/{release['id']}", data={"draft": False})
+    print(release["html_url"])
+
+
+def cmd_release_upload(args):
+    release = find_release(args.repo, args.tag)
+    for path in args.files:
+        upload(args.repo, release, path, clobber=args.clobber)
+        release = find_release(args.repo, args.tag)
+
+
+def cmd_release_delete(args):
+    release = find_release(args.repo, args.tag)
+    request("DELETE", f"{repo_path(args.repo)}/releases/{release['id']}")
+    print(f"deleted release {args.tag} (the git tag stays)")
+
+
+def cmd_release_download(args):
+    release = find_release(args.repo, args.tag)
+    os.makedirs(args.dir, exist_ok=True)
+    for a in release["assets"]:
+        target = os.path.join(args.dir, a["name"])
+        with open(target, "wb") as f:
+            request("GET", f"{repo_path(args.repo)}/releases/assets/{a['id']}",
+                    headers={"Accept": "application/octet-stream"}, stream_to=f)
+        print(f"downloaded {target}")
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="mygit", description="mygit command line")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    login = sub.add_parser("login", help="save the server address and a token")
+    login.add_argument("url")
+    login.set_defaults(fn=cmd_login)
+
+    repo = sub.add_parser("repo").add_subparsers(dest="sub", required=True)
+    rc = repo.add_parser("create")
+    rc.add_argument("name")
+    rc.add_argument("--private", action="store_true")
+    rc.add_argument("--description")
+    rc.add_argument("--owner")
+    rc.set_defaults(fn=cmd_repo_create)
+
+    rel = sub.add_parser("release").add_subparsers(dest="sub", required=True)
+    rl = rel.add_parser("list")
+    rl.add_argument("repo")
+    rl.set_defaults(fn=cmd_release_list)
+    cr = rel.add_parser("create")
+    cr.add_argument("repo")
+    cr.add_argument("tag")
+    cr.add_argument("files", nargs="*")
+    cr.add_argument("--title")
+    cr.add_argument("--notes")
+    cr.add_argument("--notes-file")
+    cr.add_argument("--target")
+    cr.add_argument("--draft", action="store_true")
+    cr.add_argument("--prerelease", action="store_true")
+    cr.add_argument("--latest", default="true", choices=["true", "false"])
+    cr.set_defaults(fn=cmd_release_create)
+    up = rel.add_parser("upload")
+    up.add_argument("repo")
+    up.add_argument("tag")
+    up.add_argument("files", nargs="+")
+    up.add_argument("--clobber", action="store_true")
+    up.set_defaults(fn=cmd_release_upload)
+    de = rel.add_parser("delete")
+    de.add_argument("repo")
+    de.add_argument("tag")
+    de.set_defaults(fn=cmd_release_delete)
+    dl = rel.add_parser("download")
+    dl.add_argument("repo")
+    dl.add_argument("tag")
+    dl.add_argument("--dir", default=".")
+    dl.set_defaults(fn=cmd_release_download)
+
+    args = p.parse_args(argv)
+    try:
+        args.fn(args)
+    except Fail as e:
+        print(f"mygit: {e}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

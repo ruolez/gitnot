@@ -501,3 +501,25 @@ table.diff { border-collapse: collapse; width: 100%; font-family: var(--mono); f
 
 .danger-zone { border-color: var(--danger); }
 .danger-zone .card-head { background: var(--danger-soft); border-bottom-color: var(--danger); }
+
+/* ---------- releases ---------- */
+.release { display: grid; grid-template-columns: 180px minmax(0, 1fr); margin-bottom: 16px; }
+.release-side { padding: 16px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.release-side .avatar { width: 20px; height: 20px; font-size: 10px; }
+.release-main { padding: 16px; min-width: 0; }
+@media (max-width: 760px) {
+  .release { grid-template-columns: 1fr; }
+  .release-side { border-right: 0; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; gap: 12px; }
+}
+.assets-box { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.assets-box > summary { padding: 8px 12px; cursor: pointer; background: var(--surface-2); border-radius: var(--radius-sm); }
+.assets-box[open] > summary { border-bottom: 1px solid var(--border); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.list.assets > li { padding: 7px 12px; }
+.list.assets .ico { color: var(--text-3); }
+.dropzone {
+  border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 22px; text-align: center;
+  color: var(--text-2); cursor: pointer; background: var(--surface-2);
+}
+.dropzone:hover, .dropzone.over { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.upload-list > li { padding: 6px 4px; }
+.upload-list progress { width: 120px; }

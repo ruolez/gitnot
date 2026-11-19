@@ -95,8 +95,12 @@ def trash_dir():
 
 
 def delete(repo_id):
-    """Drop the row and move the git directory to .trash (purged after a week)."""
+    """Drop the row and move the git directory to .trash (purged after a week).
+    Release files go at once; their rows are gone with the repository."""
+    import releases_api
+
     db.execute("DELETE FROM repos WHERE id = %s", (repo_id,))
+    releases_api.delete_all(repo_id)
     path = gitcmd.repo_path(repo_id)
     if os.path.isdir(path):
         os.rename(path, os.path.join(trash_dir(), f"{repo_id}-{int(time.time())}.git"))
