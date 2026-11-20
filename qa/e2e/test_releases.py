@@ -1,5 +1,5 @@
 """Releases: the GitHub-compatible API that updaters read, uploads and
-downloads (incl. resume), drafts, "latest", and the mygit CLI."""
+downloads (incl. resume), drafts, "latest", and the gitnot CLI."""
 
 import hashlib
 import os
@@ -148,14 +148,14 @@ def test_delete_release_removes_files(project):
 def test_cli_release_flow(project, tmp_path):
     """The CLI as downloaded from the server, the way release scripts use it."""
     p = project
-    cli = tmp_path / "mygit"
-    cli.write_bytes(requests.get(f"{BASE}/cli/mygit", timeout=30).content)
+    cli = tmp_path / "gitnot"
+    cli.write_bytes(requests.get(f"{BASE}/cli/gitnot", timeout=30).content)
     files = []
     for name, data in (("VS-Gammon-2.0.0-windows-x64.zip", b"zip"), ("VS-Gammon-2.0.0-windows-x64.zip.sig", b"sig")):
         f = tmp_path / name
         f.write_bytes(data)
         files.append(str(f))
-    env = {**os.environ, "MYGIT_URL": BASE, "MYGIT_TOKEN": p["token"], "HOME": str(tmp_path)}
+    env = {**os.environ, "GITNOT_URL": BASE, "GITNOT_TOKEN": p["token"], "HOME": str(tmp_path)}
     run = lambda *a: subprocess.run(["python3", str(cli), *a], capture_output=True, text=True, env=env, timeout=120)
     out = run("release", "create", p["repo"]["full_name"], "v2.0.0-windows", *files, "--notes", "win", "--latest=false")
     assert out.returncode == 0, out.stderr

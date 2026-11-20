@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# mygit: installer for Ubuntu 22.04 / 24.04 LTS
+# git-Not: installer for Ubuntu 22.04 / 24.04 LTS
 #
 #   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/ruolez/gitnot/main/install.sh)"
 #
 # Menu: Install · Update · Backup · Restore · SSL · Status · Remove
 # Non-interactive: install.sh install|update|backup|restore <dir>|ssl|status|remove
 #
-# With a domain, mygit runs behind the shared host proxy (github.com/ruolez/shared-proxy),
+# With a domain, git-Not runs behind the shared host proxy (github.com/ruolez/shared-proxy),
 # which owns 80/443 and terminates TLS. Without one it answers plain HTTP on a port
 # (fine on a LAN; tokens then travel unencrypted). SSH for git listens on SSH_PORT.
 #
@@ -174,13 +174,13 @@ public_url() {
 }
 
 wait_for_health() {
-    info "Waiting for mygit to answer..."
+    info "Waiting for git-Not to answer..."
     # The API, and the git path through nginx's auth check (an anonymous probe of a
     # repository that doesn't exist must be asked for credentials: 401).
     local code
     for _ in $(seq 1 90); do
         code="$(curl -s -o /dev/null -w '%{http_code}' "$(health_url)/-probe-/-probe-.git/info/refs?service=git-upload-pack" 2>/dev/null || true)"
-        if curl -fs "$(health_url)/api/health" >/dev/null 2>&1 && [ "$code" = "401" ]; then ok "mygit is up"; return 0; fi
+        if curl -fs "$(health_url)/api/health" >/dev/null 2>&1 && [ "$code" = "401" ]; then ok "git-Not is up"; return 0; fi
         sleep 2
     done
     warn "Health check timed out. Logs: cd $INSTALL_DIR && docker compose logs --tail 100"
@@ -218,7 +218,7 @@ backup_data() {
     done
     compose start backend git </dev/null >/dev/null 2>&1 || true
     cp "$INSTALL_DIR/.env" "$dir/env"
-    wait_for_health >/dev/null || warn "mygit is slow to come back after the backup; check: install.sh status"
+    wait_for_health >/dev/null || warn "git-Not is slow to come back after the backup; check: install.sh status"
     ls -1dt "$BACKUP_DIR"/mygit-* 2>/dev/null | tail -n +11 | xargs -r rm -rf
     umask "$old_umask"
     ok "Backup complete: $dir ($(du -sh "$dir" | cut -f1)); the last 10 are kept"
@@ -236,7 +236,7 @@ do_restore() {
         echo "Backups:"; ls -1dt "$BACKUP_DIR"/mygit-* 2>/dev/null | head -10 | sed 's/^/  /'
         dir="$(ask "Backup folder to restore: " "$(ls -1dt "$BACKUP_DIR"/mygit-* 2>/dev/null | head -1)")"
     fi
-    [ -f "$dir/db.sql.gz" ] || fail "$dir is not a mygit backup (no db.sql.gz)."
+    [ -f "$dir/db.sql.gz" ] || fail "$dir is not a git-Not backup (no db.sql.gz)."
     confirm "Replace ALL current data with $dir? [y/N] " || fail "Aborted."
     info "Stopping mygit..."
     compose stop nginx git backend >/dev/null
@@ -260,7 +260,7 @@ do_restore() {
 # ---------------------------------------------------------------- install
 do_install() {
     if [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
-        warn "mygit is already installed at $INSTALL_DIR."
+        warn "git-Not is already installed at $INSTALL_DIR."
         yes_no "Run an UPDATE instead? [Y/n] " "y" && { do_update; return; }
         fail "Aborted."
     fi
@@ -270,7 +270,7 @@ do_install() {
     install_docker
 
     local domain email admin http_port ssh_port
-    domain="${MYGIT_DOMAIN-$(ask "Domain for mygit, e.g. git.example.com (empty = plain HTTP on a port): " "")}"
+    domain="${MYGIT_DOMAIN-$(ask "Domain for git-Not, e.g. gitnot.site (empty = plain HTTP on a port): " "")}"
     if [ -n "$domain" ]; then
         valid_domain "$domain" || fail "'$domain' is not a domain name."
         email="${MYGIT_EMAIL-$(ask "Email for Let's Encrypt expiry notices (optional): " "")}"
@@ -290,7 +290,7 @@ do_install() {
 
     local admin_pass; admin_pass="$(rand 6)"
     if docker volume inspect "$(volume pgdata)" >/dev/null 2>&1; then
-        [ -f "$KEPT_ENV" ] || fail "A mygit database volume exists from an earlier install, but its secrets ($KEPT_ENV) are gone.
+        [ -f "$KEPT_ENV" ] || fail "A git-Not database volume exists from an earlier install, but its secrets ($KEPT_ENV) are gone.
        Put that file back, or delete the old data volumes (mygit_pgdata, mygit_repos, mygit_releases, mygit_sshkeys)."
         info "Reusing the data and secrets of the earlier installation..."
         (umask 077; cp "$KEPT_ENV" "$INSTALL_DIR/.env")
@@ -326,18 +326,18 @@ EOF
     info "Building images (a few minutes the first time)..."
     compose build
     if [ -n "$domain" ] && obtain_certificate "$domain" "$email"; then set_env PUBLIC_URL "https://${domain}"; fi
-    info "Starting mygit (database migrations run at startup)..."
+    info "Starting git-Not (database migrations run at startup)..."
     compose up -d
     wait_for_health || true
     if [ -n "$domain" ] && [ -f "/etc/letsencrypt/live/${domain}/fullchain.pem" ]; then
-        publish_host_vhost "$domain" || warn "mygit runs on 127.0.0.1:${http_port} but is not published; fix the vhost, then run: install.sh ssl"
+        publish_host_vhost "$domain" || warn "git-Not runs on 127.0.0.1:${http_port} but is not published; fix the vhost, then run: install.sh ssl"
     elif [ -n "$domain" ]; then
-        warn "No certificate yet: mygit answers on 127.0.0.1:${http_port} only. When DNS points here, run: install.sh ssl"
+        warn "No certificate yet: git-Not answers on 127.0.0.1:${http_port} only. When DNS points here, run: install.sh ssl"
     fi
     open_ssh_port
 
     echo
-    ok "mygit installed."
+    ok "git-Not installed."
     echo -e "  Web:       ${GREEN}$(public_url)${NC}"
     echo -e "  Sign in:   ${GREEN}$(get_env ADMIN_USERNAME)${NC} / ${GREEN}${admin_pass}${NC}   (change it in Settings)"
     echo -e "  SSH:       git@$(get_env SSH_HOST) on port $(get_env SSH_PORT)"
@@ -363,7 +363,7 @@ do_update() {
     if proxy_mode && [ -f "/etc/letsencrypt/live/$(get_env DOMAIN)/fullchain.pem" ]; then
         publish_host_vhost "$(get_env DOMAIN)" || warn "Host vhost left as it was."
     fi
-    ok "mygit updated: $(git -C "$INSTALL_DIR" log -1 --format='%h %s')"
+    ok "git-Not updated: $(git -C "$INSTALL_DIR" log -1 --format='%h %s')"
 }
 
 # ---------------------------------------------------------------- ssl
@@ -371,7 +371,7 @@ do_ssl() {
     [ -f "$INSTALL_DIR/docker-compose.yml" ] || fail "No installation at $INSTALL_DIR."
     local domain; domain="$(get_env DOMAIN)"
     if [ -z "$domain" ]; then
-        domain="${MYGIT_DOMAIN:-$(ask "Domain for mygit: " "")}"
+        domain="${MYGIT_DOMAIN:-$(ask "Domain for git-Not: " "")}"
         valid_domain "$domain" || fail "'$domain' is not a domain name."
         ensure_shared_proxy
         set_env PROXY_MODE 1
@@ -401,7 +401,7 @@ do_status() {
 
 do_remove() {
     [ -d "$INSTALL_DIR" ] || fail "No installation at $INSTALL_DIR."
-    confirm "Stop mygit and remove its containers? [y/N] " || fail "Aborted."
+    confirm "Stop git-Not and remove its containers? [y/N] " || fail "Aborted."
     yes_no "Make a final backup first? [Y/n] " "y" && backup_data
     local wipe="${MYGIT_DELETE_DATA:-}"
     if [ -z "$wipe" ] && [ -t 0 ]; then
@@ -421,7 +421,7 @@ do_remove() {
         rm -f "$HOST_VHOST_LINK" "$HOST_VHOST"
         systemctl reload nginx >/dev/null 2>&1 || true
     fi
-    ok "mygit removed. Backups stay in $BACKUP_DIR."
+    ok "git-Not removed. Backups stay in $BACKUP_DIR."
 }
 
 main() {
@@ -438,7 +438,7 @@ main() {
         *) fail "Unknown command '$1' (install|update|backup|restore <dir>|ssl|status|remove)" ;;
     esac
     echo
-    echo -e "${BLUE}=== mygit installer ===${NC}"
+    echo -e "${BLUE}=== git-Not installer ===${NC}"
     echo "  1) Install"
     echo "  2) Update   (backup, pull, rebuild; all data kept)"
     echo "  3) Backup"

@@ -63,7 +63,7 @@ def _judge():
 def git_auth():
     decision, req, repo, principal = _judge()
     if decision.status == 401:
-        return Response("", 401, {"WWW-Authenticate": 'Basic realm="mygit"'})
+        return Response("", 401, {"WWW-Authenticate": 'Basic realm="git-Not"'})
     if decision.status != 200:
         return Response("", 403)
     user = principal.user
@@ -229,15 +229,15 @@ def ssh_authorize():
         (int(data.get("key_id") or 0),), one=True,
     )
     if not key:
-        return jsonify({"ok": False, "message": "This key is not registered with mygit"})
+        return jsonify({"ok": False, "message": "This key is not registered with git-Not"})
     user = {k: key[k] for k in key if k != "key_id"}
     command = str(data.get("command") or "")
     if not command:
         return jsonify({"ok": False, "greeting": True, "message":
-                        f"Hi {user['username']}! You've authenticated, but mygit does not provide shell access."})
+                        f"Hi {user['username']}! You've authenticated, but git-Not does not provide shell access."})
     cmd = parse_ssh_command(command)
     if cmd is None:
-        return jsonify({"ok": False, "message": "mygit only runs git commands over SSH"})
+        return jsonify({"ok": False, "message": "git-Not only runs git commands over SSH"})
     repo = repos.resolve(cmd.owner, cmd.repo)
     principal = credentials.Principal(user=user, access="admin", kind="ssh")
     level = repos.access_for(repo, principal)

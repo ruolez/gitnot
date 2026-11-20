@@ -5,7 +5,7 @@ import re
 RESERVED = frozenset({
     "about", "api", "cli", "assets", "explore", "favicon.ico", "health", "healthz",
     "help", "install", "internal", "login", "logout", "new", "raw", "robots.txt",
-    "settings", "signup", "static", "users", "git", "mygit", "repos", "org", "orgs",
+    "settings", "signup", "static", "users", "git", "mygit", "gitnot", "git-not", "repos", "org", "orgs",
     "_auth", "well-known", ".well-known",
 })
 

@@ -70,7 +70,7 @@ def _git(repo_id, args, env, timeout=3600):
 
 def _github(path, token, accept="application/vnd.github+json"):
     req = urllib.request.Request(f"{GITHUB_API}{path}", headers={
-        "Accept": accept, "User-Agent": "mygit-import", "X-GitHub-Api-Version": "2022-11-28",
+        "Accept": accept, "User-Agent": "gitnot-import", "X-GitHub-Api-Version": "2022-11-28",
         **({"Authorization": f"Bearer {token}"} if token else {}),
     })
     return urllib.request.urlopen(req, timeout=120)

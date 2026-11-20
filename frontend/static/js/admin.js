@@ -95,7 +95,7 @@ AdminSections.push({
   await new Promise((r) => setTimeout(r, 0));
   const key = location.pathname.replace(/^\/-\/admin\/?/, '').replace(/\/$/, '');
   const section = AdminSections.find((s) => s.key === key) || AdminSections[0];
-  document.title = `${section.label} · Site admin · mygit`;
+  document.title = `${section.label} · Site admin · git-Not`;
   main.innerHTML = `<div class="page-head"><h1>Site admin</h1></div>
     <div class="split">
       <nav class="sidenav">${AdminSections.map((s) => `<a href="/-/admin${s.key ? '/' + s.key : ''}" class="${s === section ? 'active' : ''}">${icon(s.icon)}${esc(s.label)}</a>`).join('')}</nav>

@@ -135,10 +135,10 @@ check "ssh clone URL from the API names the domain" sh -c "curl -fsS --cacert $G
 cd $W
 
 section "releases through the proxy"
-curl -fsSL --cacert $GIT_SSL_CAINFO https://git.test/cli/mygit -o $W/mygit
+curl -fsSL --cacert $GIT_SSL_CAINFO https://git.test/cli/gitnot -o $W/gitnot
 head -c 3000000 /dev/urandom > $W/app-1.0.0.zip
-check "CLI publishes a release" env MYGIT_URL=https://git.test MYGIT_TOKEN=$TOK SSL_CERT_FILE=$GIT_SSL_CAINFO \
-  python3 $W/mygit release create boss/app v1.0.0 $W/app-1.0.0.zip --notes "first"
+check "CLI publishes a release" env GITNOT_URL=https://git.test GITNOT_TOKEN=$TOK SSL_CERT_FILE=$GIT_SSL_CAINFO \
+  python3 $W/gitnot release create boss/app v1.0.0 $W/app-1.0.0.zip --notes "first"
 check "latest download matches" sh -c "curl -fsSL --cacert $GIT_SSL_CAINFO https://git.test/boss/app/releases/latest/download/app-1.0.0.zip | cmp - $W/app-1.0.0.zip"
 
 section "backup and restore"

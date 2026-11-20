@@ -126,7 +126,7 @@ async function renderTree(el, ref, path) {
   if (data.kind === 'blob') { location.replace(blobUrl(ref, path)); return; }
   RepoState.ref = ref;
   RepoState.path = path;
-  document.title = path ? `${Repo.info.full_name}/${path} at ${ref} · mygit` : `${Repo.info.full_name} · mygit`;
+  document.title = path ? `${Repo.info.full_name}/${path} at ${ref} · git-Not` : `${Repo.info.full_name} · git-Not`;
   const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
   el.innerHTML = `<div class="toolbar">
       <div id="ref-picker"></div>
@@ -208,7 +208,7 @@ RepoViews.blob = {
     const { ref, path } = where;
     const data = await api(repoApi(`/blob?ref=${enc(ref)}&path=${enc(path)}`));
     if (data.kind === 'tree') { location.replace(treeUrl(ref, path)); return; }
-    document.title = `${Repo.info.full_name}/${path} at ${ref} · mygit`;
+    document.title = `${Repo.info.full_name}/${path} at ${ref} · git-Not`;
     const raw = rawUrl(ref, path);
     const fileName = path.split('/').pop();
     let body;
@@ -310,7 +310,7 @@ RepoViews.commits = {
     const where = await resolveRest(Repo.rest.slice(1));
     const page = Number(new URLSearchParams(location.search).get('page') || 1);
     const data = await api(repoApi(`/commits?ref=${enc(where.ref)}&path=${enc(where.path)}&page=${page}`));
-    document.title = `Commits · ${Repo.info.full_name} · mygit`;
+    document.title = `Commits · ${Repo.info.full_name} · git-Not`;
     el.innerHTML = `<div class="toolbar"><div id="ref-picker"></div>
         ${where.path ? `<span class="muted">History for</span> ${breadcrumb(where.ref, where.path, { file: true })}` : '<h2 style="margin:0">Commits</h2>'}</div>
       ${data.commits.length ? commitGroups(data.commits) : `<div class="card empty">No commits${where.path ? ' touch this path' : ''}.</div>`}
@@ -365,7 +365,7 @@ RepoViews.commit = {
     const sha = Repo.rest[1] || '';
     const data = await api(repoApi(`/commit/${enc(sha)}`));
     const c = data.commit;
-    document.title = `${c.subject} · ${Repo.info.full_name}@${c.short} · mygit`;
+    document.title = `${c.subject} · ${Repo.info.full_name}@${c.short} · git-Not`;
     el.innerHTML = `<div class="card commit-head">
         <div class="card-pad">
           <h1 class="commit-title">${esc(c.subject)}</h1>
@@ -392,7 +392,7 @@ RepoViews.compare = {
   async render(el) {
     const spec = Repo.rest.slice(1).join('/');
     const data = await api(repoApi(`/compare/${encPath(spec)}`));
-    document.title = `Comparing ${data.base}...${data.head} · ${Repo.info.full_name} · mygit`;
+    document.title = `Comparing ${data.base}...${data.head} · ${Repo.info.full_name} · git-Not`;
     el.innerHTML = `<div class="page-head"><h1>Comparing changes</h1></div>
       <div class="toolbar"><span class="badge">${icon('branch')}base: ${esc(data.base)}</span><span class="faint">…</span><span class="badge">${icon('branch')}compare: ${esc(data.head)}</span></div>
       ${data.commits.length ? `<h3 class="day">${data.commits.length} commit${data.commits.length === 1 ? '' : 's'}</h3><div class="card"><ul class="list">${data.commits.map(commitRow).join('')}</ul></div>`
@@ -407,7 +407,7 @@ RepoViews.branches = {
   tab: 'branches',
   async render(el) {
     const data = await api(repoApi('/refs'));
-    document.title = `Branches · ${Repo.info.full_name} · mygit`;
+    document.title = `Branches · ${Repo.info.full_name} · git-Not`;
     const def = data.branches.find((b) => b.default);
     el.innerHTML = `<div class="page-head"><h2 style="margin:0">Branches</h2><span class="badge">${data.branches.length}</span></div>
       ${data.branches.length ? `<div class="card"><ul class="list">${data.branches.map((b) => `<li class="row wrap" data-branch="${esc(b.name)}">
@@ -435,7 +435,7 @@ RepoViews.tags = {
   tab: 'tags',
   async render(el) {
     const data = await api(repoApi('/refs'));
-    document.title = `Tags · ${Repo.info.full_name} · mygit`;
+    document.title = `Tags · ${Repo.info.full_name} · git-Not`;
     el.innerHTML = `<div class="page-head"><h2 style="margin:0">Tags</h2><span class="badge">${data.tags.length}</span></div>
       ${data.tags.length ? `<div class="card"><ul class="list">${data.tags.map((t) => `<li class="row wrap">
         ${icon('tag')}<div class="grow" style="min-width:0"><a href="${treeUrl(t.name)}"><strong>${esc(t.name)}</strong></a>

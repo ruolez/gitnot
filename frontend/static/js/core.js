@@ -262,7 +262,7 @@ async function renderShell(active = '') {
   const bar = document.createElement('header');
   bar.className = 'topbar';
   bar.innerHTML = `<div class="topbar-inner">
-      <a class="brand" href="/"><span class="brand-mark">${icon('branch')}</span>mygit</a>
+      <a class="brand" href="/"><span class="brand-mark">${icon('branch')}</span>git-Not</a>
       <nav class="topnav">
         <a href="/explore" class="${active === 'explore' ? 'active' : ''}">Explore</a>
       </nav>

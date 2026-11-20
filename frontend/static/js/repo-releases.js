@@ -79,11 +79,11 @@ async function releaseList(el) {
     api(relApi(`/releases?per_page=10&page=${page}&html=1`)),
     api(relApi('/releases/latest')).catch(() => null),
   ]);
-  document.title = `Releases · ${Repo.info.full_name} · mygit`;
+  document.title = `Releases · ${Repo.info.full_name} · git-Not`;
   el.innerHTML = `<div class="page-head"><h2 style="margin:0">Releases</h2><div class="spacer"></div>
       ${canWrite() && !Repo.info.empty ? `<a class="btn primary sm" href="${repoBase()}/releases/new">${icon('plus')}New release</a>` : ''}</div>
     ${list.length ? list.map((r) => releaseCard(r, latest && latest.tag_name)).join('') : `<div class="card empty">${icon('package')}<p>No releases yet.</p>
-      <p class="small muted">Publish one here, or from a release script: <code>mygit release create ${esc(Repo.info.full_name)} v1.0.0 dist/*</code></p></div>`}
+      <p class="small muted">Publish one here, or from a release script: <code>gitnot release create ${esc(Repo.info.full_name)} v1.0.0 dist/*</code></p></div>`}
     ${page > 1 || list.length === 10 ? `<div class="row" style="justify-content:center;margin-top:16px">
       <a class="btn sm ${page > 1 ? '' : 'disabled'}" href="?page=${page - 1}">Newer</a><a class="btn sm ${list.length === 10 ? '' : 'disabled'}" href="?page=${page + 1}">Older</a></div>` : ''}
     <div class="card card-pad small muted" style="margin-top:16px">${icon('info')} Installers can fetch the newest file from <code>${esc(location.origin)}${repoBase()}/releases/latest/download/&lt;file name&gt;</code>
@@ -93,7 +93,7 @@ async function releaseList(el) {
 
 async function releaseOne(el, tag) {
   const [r, latest] = await Promise.all([api(relApi(`/releases/tags/${encPath(tag)}?html=1`)), api(relApi('/releases/latest')).catch(() => null)]);
-  document.title = `${r.name} · ${Repo.info.full_name} · mygit`;
+  document.title = `${r.name} · ${Repo.info.full_name} · git-Not`;
   el.innerHTML = `<div class="toolbar"><a href="${repoBase()}/releases">${icon('arrowLeft')} All releases</a></div>${releaseCard(r, latest && latest.tag_name, { full: true })}`;
   wireAssetButtons(el, () => releaseOne(el, tag));
 }
@@ -103,7 +103,7 @@ async function releaseForm(el, tag) {
   const editing = Boolean(tag);
   const r = editing ? await api(relApi(`/releases/tags/${encPath(tag)}`)) : null;
   const refs = await api(repoApi('/refs'));
-  document.title = `${editing ? 'Edit release' : 'New release'} · ${Repo.info.full_name} · mygit`;
+  document.title = `${editing ? 'Edit release' : 'New release'} · ${Repo.info.full_name} · git-Not`;
   const existingTags = new Set(refs.tags.map((t) => t.name));
   el.innerHTML = `<div class="page-head"><h1>${editing ? `Edit ${esc(r.name)}` : 'New release'}</h1></div>
     <form class="card card-pad" id="rel-form" style="max-width:880px">

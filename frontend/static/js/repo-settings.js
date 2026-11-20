@@ -241,7 +241,7 @@ RepoViews.settings = {
   tab: 'settings',
   async render(el) {
     if (!isRepoAdmin()) { showError(el, { status: 404 }); return; }
-    document.title = `Settings · ${Repo.info.full_name} · mygit`;
+    document.title = `Settings · ${Repo.info.full_name} · git-Not`;
     const refs = Repo.info.empty ? { branches: [] } : await api(repoApi('/refs'));
     el.innerHTML = `<div class="stack" style="max-width:880px">
       <section id="s-general"></section><section id="s-collab"></section><section id="s-protect"></section>

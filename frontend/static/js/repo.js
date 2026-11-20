@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fixed = repoHref(Repo.info.owner, Repo.info.name) + location.pathname.split('/').slice(3).map((p) => `/${p}`).join('');
     history.replaceState(null, '', fixed + location.search + location.hash);
   }
-  document.title = `${Repo.info.full_name} · mygit`;
+  document.title = `${Repo.info.full_name} · git-Not`;
   const view = pickView(Repo.rest);
   renderRepoHeader(view ? view.tab : '');
   main.innerHTML = `${Repo.info.archived ? `<div class="notice warning">${icon('archive')} This repository is archived. It is read-only: pushes are refused.</div>` : ''}<div id="view"></div>`;

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""mygit command line: releases and repositories from the terminal or a
+"""git-Not command line: releases and repositories from the terminal or a
 release script (replaces `gh release`). Python 3 standard library only.
 
-  mygit login https://git.example.com          save the server and a token
-  mygit repo create <name> [--private] [--description TEXT] [--owner USER]
-  mygit release list   <owner/repo>
-  mygit release create <owner/repo> <tag> [files...] [--title T] [--notes T | --notes-file F]
+  gitnot login https://gitnot.site          save the server and a token
+  gitnot repo create <name> [--private] [--description TEXT] [--owner USER]
+  gitnot release list   <owner/repo>
+  gitnot release create <owner/repo> <tag> [files...] [--title T] [--notes T | --notes-file F]
                        [--target BRANCH] [--draft] [--prerelease] [--latest=false]
-  mygit release upload <owner/repo> <tag> files... [--clobber]
-  mygit release delete <owner/repo> <tag>
-  mygit release download <owner/repo> <tag> [--dir DIR]
+  gitnot release upload <owner/repo> <tag> files... [--clobber]
+  gitnot release delete <owner/repo> <tag>
+  gitnot release download <owner/repo> <tag> [--dir DIR]
 
-Server and token come from $MYGIT_URL / $MYGIT_TOKEN, else from
-~/.config/mygit/config (written by `mygit login`)."""
+Server and token come from $GITNOT_URL / $GITNOT_TOKEN, else from
+~/.config/gitnot/config (written by `gitnot login`)."""
 
 import argparse
 import getpass
@@ -23,7 +23,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-CONFIG = os.path.join(os.path.expanduser("~"), ".config", "mygit", "config")
+CONFIG = os.path.join(os.path.expanduser("~"), ".config", "gitnot", "config")
 CHUNK = 1024 * 1024
 
 
@@ -38,17 +38,17 @@ def load_config():
             cfg = json.load(f)
     except (OSError, ValueError):
         pass
-    url = os.environ.get("MYGIT_URL") or cfg.get("url")
-    token = os.environ.get("MYGIT_TOKEN") or cfg.get("token")
+    url = os.environ.get("GITNOT_URL") or cfg.get("url")
+    token = os.environ.get("GITNOT_TOKEN") or cfg.get("token")
     if not url:
-        raise Fail("No server configured: run `mygit login https://your-server` or set MYGIT_URL")
+        raise Fail("No server configured: run `gitnot login https://your-server` or set GITNOT_URL")
     return url.rstrip("/"), token
 
 
 def request(method, path, data=None, body=None, headers=None, stream_to=None, auth=True):
     base, token = load_config()
     url = path if path.startswith("http") else base + path
-    hdrs = {"Accept": "application/json", "User-Agent": "mygit-cli", **(headers or {})}
+    hdrs = {"Accept": "application/json", "User-Agent": "gitnot-cli", **(headers or {})}
     if auth and token:
         hdrs["Authorization"] = f"token {token}"
     payload = None
@@ -76,7 +76,7 @@ def request(method, path, data=None, body=None, headers=None, stream_to=None, au
             message = None
         if e.code == 401:
             message = message or "Not signed in"
-            message += " (check your token: mygit login)"
+            message += " (check your token: gitnot login)"
         raise Fail(f"{method} {path}: {message or e.reason} ({e.code})") from None
     except urllib.error.URLError as e:
         raise Fail(f"Can't reach {base}: {e.reason}") from None
@@ -138,8 +138,8 @@ def upload(full, release, path, clobber=False):
 
 def cmd_login(args):
     url = args.url.rstrip("/")
-    token = os.environ.get("MYGIT_TOKEN") or getpass.getpass(f"Access token for {url} (Settings > Access tokens): ")
-    os.environ["MYGIT_URL"], os.environ["MYGIT_TOKEN"] = url, token.strip()
+    token = os.environ.get("GITNOT_TOKEN") or getpass.getpass(f"Access token for {url} (Settings > Access tokens): ")
+    os.environ["GITNOT_URL"], os.environ["GITNOT_TOKEN"] = url, token.strip()
     me = request("GET", "/api/auth/me")
     os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
     fd = os.open(CONFIG, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -205,7 +205,7 @@ def cmd_release_download(args):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog="mygit", description="mygit command line")
+    p = argparse.ArgumentParser(prog="gitnot", description="git-Not command line")
     sub = p.add_subparsers(dest="cmd", required=True)
     login = sub.add_parser("login", help="save the server address and a token")
     login.add_argument("url")
@@ -255,7 +255,7 @@ def main(argv=None):
     try:
         args.fn(args)
     except Fail as e:
-        print(f"mygit: {e}", file=sys.stderr)
+        print(f"gitnot: {e}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         return 130

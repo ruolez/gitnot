@@ -1,20 +1,20 @@
-# Moving the apps from GitHub to mygit
+# Moving the apps from GitHub to git-Not
 
-Do one app at a time. Below, `GIT=https://gitnot.site` is mygit's address.
+Do one app at a time. Below, `GIT=https://gitnot.site` is git-Not's address.
 
 ## 1. Bring the repository over
 
 1. *New repository › Import*, URL `https://github.com/ruolez/<app>.git`.
    - For vs-gammon choose **Code + every release** so the updaters find the existing builds.
    - For a private GitHub repo, add a GitHub token with read access.
-2. On your Mac, point the checkout at mygit and keep GitHub as a second remote:
+2. On your Mac, point the checkout at git-Not and keep GitHub as a second remote:
    ```bash
    git remote rename origin github
    git remote add origin $GIT/ruolez/<app>.git
    git fetch origin && git branch -u origin/main
    ```
 3. In the repo's *Settings › Push mirror*, add `https://github.com/ruolez/<app>.git` with a GitHub token that can push (fine-grained, *Contents: read and write*).
-   - From now on every push to mygit also lands on GitHub.
+   - From now on every push to git-Not also lands on GitHub.
    - Servers that still pull from GitHub keep getting updates.
 
 ## 2. Change the installer
@@ -35,8 +35,8 @@ git -C "$INSTALL_DIR" reset --hard origin/main
 ```
 
 Push that installer change (it reaches GitHub through the mirror). Then run the app's normal *Update* on each server:
-- the update runs the new script, which switches the remote to mygit;
-- every update after that comes from mygit.
+- the update runs the new script, which switches the remote to git-Not;
+- every update after that comes from git-Not.
 
 | App | Installer lines to change |
 |---|---|
@@ -59,12 +59,12 @@ The release JSON is GitHub's, so only the feed address changes.
 
 - **Windows** (`app/updater.py`):
   - change `FEED` to `$GIT/api/v1/repos/ruolez/vs-gammon/releases?per_page=30`;
-  - verified: the current updater, pointed at mygit with `VSG_UPDATE_FEED`, finds the newest `-windows` release, downloads it, and the Ed25519 signature checks out.
+  - verified: the current updater, pointed at git-Not with `VSG_UPDATE_FEED`, finds the newest `-windows` release, downloads it, and the Ed25519 signature checks out.
 - **macOS** (`packaging/macos/shell/Updater.swift`):
   - change the URL to `$GIT/api/v1/repos/ruolez/vs-gammon/releases/latest`;
   - a 404 still means "no update".
 - **Publishing**: `packaging/macos/release.sh` and the Windows steps upload by hand today. Use the CLI instead:
-  - `mygit release create ruolez/vs-gammon v1.7.0 dist/release/VS-Gammon-1.7.0.zip*` for the Mac build;
-  - `mygit release create ruolez/vs-gammon v1.7.0-windows dist/release/*windows* --latest=false` for the Windows builds.
+  - `gitnot release create ruolez/vs-gammon v1.7.0 dist/release/VS-Gammon-1.7.0.zip*` for the Mac build;
+  - `gitnot release create ruolez/vs-gammon v1.7.0-windows dist/release/*windows* --latest=false` for the Windows builds.
 
 Apps already installed check the old GitHub feed until they update once. Keep publishing to GitHub (the push mirror covers the code, not releases) for one release cycle, or ship the new feed URL first.

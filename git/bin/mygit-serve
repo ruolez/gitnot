@@ -18,7 +18,7 @@ def main():
     try:
         verdict = call("/internal/ssh/authorize", {"key_id": key_id, "command": command}, timeout=20)
     except Exception as e:  # noqa: BLE001
-        print(f"ERROR: mygit is not reachable right now ({e.__class__.__name__}). Try again in a moment.",
+        print(f"ERROR: git-Not is not reachable right now ({e.__class__.__name__}). Try again in a moment.",
               file=sys.stderr)
         return 1
     if not verdict.get("ok"):
@@ -28,7 +28,7 @@ def main():
     service = SERVICES.get(verdict.get("service"))
     path = verdict.get("path") or ""
     if service is None or not path.startswith("/data/repos/") or ".." in path:
-        print("ERROR: unexpected reply from mygit", file=sys.stderr)
+        print("ERROR: unexpected reply from git-Not", file=sys.stderr)
         return 1
     env = {
         "PATH": "/usr/local/bin:/usr/bin:/bin",

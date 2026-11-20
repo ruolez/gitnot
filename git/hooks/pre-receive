@@ -40,7 +40,7 @@ def main():
     try:
         verdict = call("/internal/hooks/pre-receive", {**ctx, "refs": updates, "force": force})
     except Exception as e:  # noqa: BLE001 - any failure must refuse the push
-        say([f"mygit: could not check this push ({e.__class__.__name__}); try again in a moment"])
+        say([f"git-Not: could not check this push ({e.__class__.__name__}); try again in a moment"])
         return 1
     if not verdict.get("ok"):
         say(["", *[f"error: {m}" for m in verdict.get("messages") or ["push refused"]], ""])

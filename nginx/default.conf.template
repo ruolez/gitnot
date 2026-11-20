@@ -17,7 +17,7 @@ server {
         try_files $uri =404;
     }
     location = /favicon.ico { try_files /static/favicon.svg =404; default_type image/svg+xml; }
-    location = /cli/mygit { alias /usr/share/nginx/cli/mygit; default_type text/plain; add_header Cache-Control "no-cache" always; }
+    location = /cli/gitnot { alias /usr/share/nginx/cli/gitnot; default_type text/plain; add_header Cache-Control "no-cache" always; }
     location = /robots.txt { return 200 "User-agent: *\nDisallow: /\n"; default_type text/plain; }
 
     location ^~ /api/ {
@@ -124,7 +124,7 @@ server {
     # Git LFS clients get a clear answer instead of a web page.
     location ~ ^/[^/]+/[^/]+/info/lfs/ {
         default_type application/vnd.git-lfs+json;
-        return 501 '{"message":"mygit does not support Git LFS. Put large files in a release instead."}\n';
+        return 501 '{"message":"git-Not does not support Git LFS. Put large files in a release instead."}\n';
     }
 
     # A browser opening a clone URL lands on the repository page.

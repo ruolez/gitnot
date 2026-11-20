@@ -124,7 +124,7 @@ SettingsSections.push({
         <p class="muted">Create a key if you don't have one, then add the contents of the <code>.pub</code> file above:</p>
         <pre class="code">ssh-keygen -t ed25519 -C "you@laptop"
 cat ~/.ssh/id_ed25519.pub</pre>
-        <p class="muted" style="margin-top:12px">mygit listens for SSH on its own port. Add this to <code>~/.ssh/config</code> so short addresses like <code>git@${esc(host)}:owner/repo.git</code> work:</p>
+        <p class="muted" style="margin-top:12px">git-Not listens for SSH on its own port. Add this to <code>~/.ssh/config</code> so short addresses like <code>git@${esc(host)}:owner/repo.git</code> work:</p>
         <pre class="code" id="ssh-config">Host ${esc(host)}
   User git
   Port <span id="ssh-port">2222</span></pre>
@@ -170,7 +170,7 @@ cat ~/.ssh/id_ed25519.pub</pre>
   await new Promise((r) => setTimeout(r, 0));
   const key = location.pathname.replace(/^\/settings\/?/, '').replace(/\/$/, '');
   const section = SettingsSections.find((s) => s.key === key) || SettingsSections[0];
-  document.title = `${section.label} · Settings · mygit`;
+  document.title = `${section.label} · Settings · git-Not`;
   const main = $('#main');
   main.innerHTML = `<div class="page-head">${avatar(me.username)}<h1>${esc(me.username)}</h1><span class="muted">Account settings</span></div>
     <div class="split">

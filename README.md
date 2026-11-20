@@ -1,4 +1,4 @@
-# mygit
+# git-Not
 
 A small self-hosted Git server for a team: push, pull and clone over **HTTPS and SSH** with the normal `git` command, browse code on the web, publish **releases**, and serve the raw files, archives and release feeds that app installers and updaters use.
 
@@ -14,7 +14,7 @@ A small self-hosted Git server for a team: push, pull and clone over **HTTPS and
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/ruolez/gitnot/main/install.sh)"
 ```
 
-- **With a domain** (ours: `gitnot.site`): mygit goes behind the [shared proxy](https://github.com/ruolez/shared-proxy), which owns ports 80/443 and gets a Let's Encrypt certificate. The web port only listens on 127.0.0.1.
+- **With a domain** (ours: `gitnot.site`): git-Not goes behind the [shared proxy](https://github.com/ruolez/shared-proxy), which owns ports 80/443 and gets a Let's Encrypt certificate. The web port only listens on 127.0.0.1.
 - **Without a domain**: plain HTTP on port 5564 (fine on a LAN; tokens then travel unencrypted).
 - SSH for git listens on port 2222. Open it in your provider's firewall too (e.g. IONOS Cloud Panel).
 
@@ -41,7 +41,7 @@ Host gitnot.site
 
 then `git clone git@gitnot.site:you/app.git`. Check with `ssh -T git@gitnot.site`.
 
-Everything git can do works, because mygit runs git's own server programs: branches, tags, force pushes, shallow (`--depth`) and partial (`--filter=blob:none`) clones, protocol v0 and v2, `git archive --remote` over SSH.
+Everything git can do works, because git-Not runs git's own server programs: branches, tags, force pushes, shallow (`--depth`) and partial (`--filter=blob:none`) clones, protocol v0 and v2, `git archive --remote` over SSH.
 
 ## For installers and updaters
 
@@ -57,18 +57,18 @@ Raw files are served fresh (ETag, no 5-minute cache like raw.githubusercontent.c
 
 **Private repositories**: create a read-only *deploy token* in the repo's Settings and use it as `https://deploy:<token>@gitnot.site/you/app.git`, `curl -u deploy:<token> …`, or `Authorization: token <token>`.
 
-## Releases from scripts: the `mygit` CLI
+## Releases from scripts: the `gitnot` CLI
 
 ```bash
-curl -fsSL https://gitnot.site/cli/mygit -o /usr/local/bin/mygit && chmod +x /usr/local/bin/mygit
-mygit login https://gitnot.site
-mygit release create you/app v1.2.0 dist/*.zip --notes-file CHANGES.md
-mygit release create you/app v1.2.0-windows dist/win/* --latest=false
-mygit release upload you/app v1.2.0 extra.sig --clobber
-mygit release list you/app
+curl -fsSL https://gitnot.site/cli/gitnot -o /usr/local/bin/gitnot && chmod +x /usr/local/bin/gitnot
+gitnot login https://gitnot.site
+gitnot release create you/app v1.2.0 dist/*.zip --notes-file CHANGES.md
+gitnot release create you/app v1.2.0-windows dist/win/* --latest=false
+gitnot release upload you/app v1.2.0 extra.sig --clobber
+gitnot release list you/app
 ```
 
-Python 3 standard library only. `MYGIT_URL` / `MYGIT_TOKEN` override the saved login.
+Python 3 standard library only. `GITNOT_URL` / `GITNOT_TOKEN` override the saved login.
 
 ## Moving from GitHub
 

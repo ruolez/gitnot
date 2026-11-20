@@ -4,7 +4,7 @@
   const username = decodeURIComponent(location.pathname.split('/')[1]);
   try {
     const user = await api(`/api/users/${encodeURIComponent(username)}`);
-    document.title = `${user.username} · mygit`;
+    document.title = `${user.username} · git-Not`;
     const own = me && me.username.toLowerCase() === user.username.toLowerCase();
     const repos = user.repos.length
       ? `<ul class="list">${user.repos.map((r) => repoItem(r, { showOwner: false })).join('')}</ul>`
