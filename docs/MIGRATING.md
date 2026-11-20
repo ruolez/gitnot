@@ -1,6 +1,6 @@
 # Moving the apps from GitHub to mygit
 
-Do one app at a time. Below, `GIT=https://git.example.com` is mygit's address.
+Do one app at a time. Below, `GIT=https://gitnot.site` is mygit's address.
 
 ## 1. Bring the repository over
 
@@ -51,7 +51,7 @@ Push that installer change (it reaches GitHub through the mirror). Then run the 
 
 Public repositories need no token: `curl | bash` and `git clone` work anonymously, just like on GitHub.
 
-For a **private** repository, create a read-only deploy token in its Settings and put it in the installer's clone URL: `https://deploy:<token>@git.example.com/...`. The update step's `remote set-url` keeps it.
+For a **private** repository, create a read-only deploy token in its Settings and put it in the installer's clone URL: `https://deploy:<token>@gitnot.site/...`. The update step's `remote set-url` keeps it.
 
 ## 3. vs-gammon updaters
 

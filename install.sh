@@ -2,7 +2,7 @@
 #
 # mygit: installer for Ubuntu 22.04 / 24.04 LTS
 #
-#   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/ruolez/mygit/main/install.sh)"
+#   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/ruolez/gitnot/main/install.sh)"
 #
 # Menu: Install · Update · Backup · Restore · SSL · Status · Remove
 # Non-interactive: install.sh install|update|backup|restore <dir>|ssl|status|remove
@@ -18,7 +18,7 @@
 #
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/ruolez/mygit.git}"
+REPO_URL="${REPO_URL:-https://github.com/ruolez/gitnot.git}"
 BRANCH="${BRANCH:-main}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/mygit}"
 BACKUP_DIR="${BACKUP_DIR:-/opt/mygit-backups}"

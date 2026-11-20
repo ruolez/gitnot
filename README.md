@@ -11,10 +11,10 @@ A small self-hosted Git server for a team: push, pull and clone over **HTTPS and
 ## Install (Ubuntu 22.04 / 24.04)
 
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/ruolez/mygit/main/install.sh)"
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/ruolez/gitnot/main/install.sh)"
 ```
 
-- **With a domain** (e.g. `git.example.com`): mygit goes behind the [shared proxy](https://github.com/ruolez/shared-proxy), which owns ports 80/443 and gets a Let's Encrypt certificate. The web port only listens on 127.0.0.1.
+- **With a domain** (ours: `gitnot.site`): mygit goes behind the [shared proxy](https://github.com/ruolez/shared-proxy), which owns ports 80/443 and gets a Let's Encrypt certificate. The web port only listens on 127.0.0.1.
 - **Without a domain**: plain HTTP on port 5564 (fine on a LAN; tokens then travel unencrypted).
 - SSH for git listens on port 2222. Open it in your provider's firewall too (e.g. IONOS Cloud Panel).
 
@@ -27,19 +27,19 @@ Backups go to `/opt/mygit-backups/mygit-<time>/` (database dump, repositories, r
 **HTTPS.** Make a token in *Settings › Access tokens*, then use it as the password when git asks (macOS Keychain and Git Credential Manager remember it):
 
 ```bash
-git remote add origin https://git.example.com/you/app.git
+git remote add origin https://gitnot.site/you/app.git
 git push -u origin main
 ```
 
 **SSH.** Add your key in *Settings › SSH keys*, and add this to `~/.ssh/config` so the short form works:
 
 ```
-Host git.example.com
+Host gitnot.site
   User git
   Port 2222
 ```
 
-then `git clone git@git.example.com:you/app.git`. Check with `ssh -T git@git.example.com`.
+then `git clone git@gitnot.site:you/app.git`. Check with `ssh -T git@gitnot.site`.
 
 Everything git can do works, because mygit runs git's own server programs: branches, tags, force pushes, shallow (`--depth`) and partial (`--filter=blob:none`) clones, protocol v0 and v2, `git archive --remote` over SSH.
 
@@ -47,21 +47,21 @@ Everything git can do works, because mygit runs git's own server programs: branc
 
 | What | URL |
 |---|---|
-| Raw file | `https://git.example.com/raw/<owner>/<repo>/<branch>/<path>` (also `/<owner>/<repo>/raw/<ref>/<path>` and `/raw/<owner>/<repo>/refs/heads/<branch>/<path>`) |
-| One-line install | `bash -c "$(curl -fsSL https://git.example.com/raw/you/app/main/install.sh)"` |
+| Raw file | `https://gitnot.site/raw/<owner>/<repo>/<branch>/<path>` (also `/<owner>/<repo>/raw/<ref>/<path>` and `/raw/<owner>/<repo>/refs/heads/<branch>/<path>`) |
+| One-line install | `bash -c "$(curl -fsSL https://gitnot.site/raw/you/app/main/install.sh)"` |
 | Archive | `/<owner>/<repo>/archive/<ref>.tar.gz` or `.zip` |
 | Release file | `/<owner>/<repo>/releases/download/<tag>/<file>` and `/releases/latest/download/<file>` (resumable) |
 | Releases API | `/api/v1/repos/<owner>/<repo>/releases`, `/releases/latest`, `/releases/tags/<tag>`: same JSON as GitHub's REST API, so an updater only needs a new base URL |
 
 Raw files are served fresh (ETag, no 5-minute cache like raw.githubusercontent.com). Raw content is never rendered as a page: text is `text/plain` and every response has a sandbox CSP.
 
-**Private repositories**: create a read-only *deploy token* in the repo's Settings and use it as `https://deploy:<token>@git.example.com/you/app.git`, `curl -u deploy:<token> …`, or `Authorization: token <token>`.
+**Private repositories**: create a read-only *deploy token* in the repo's Settings and use it as `https://deploy:<token>@gitnot.site/you/app.git`, `curl -u deploy:<token> …`, or `Authorization: token <token>`.
 
 ## Releases from scripts: the `mygit` CLI
 
 ```bash
-curl -fsSL https://git.example.com/cli/mygit -o /usr/local/bin/mygit && chmod +x /usr/local/bin/mygit
-mygit login https://git.example.com
+curl -fsSL https://gitnot.site/cli/mygit -o /usr/local/bin/mygit && chmod +x /usr/local/bin/mygit
+mygit login https://gitnot.site
 mygit release create you/app v1.2.0 dist/*.zip --notes-file CHANGES.md
 mygit release create you/app v1.2.0-windows dist/win/* --latest=false
 mygit release upload you/app v1.2.0 extra.sig --clobber
